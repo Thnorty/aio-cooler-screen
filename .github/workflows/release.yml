@@ -79,4 +79,6 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --draft --title "$GITHUB_REF_NAME" \
             --notes "Built from $GITHUB_SHA by [this workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID).
 
-          SHA-256 of the installer: \`$sha\`"
+          SHA-256 of the installer: \`$sha\`
+
+          [Code signing policy](https://github.com/$GITHUB_REPOSITORY#code-signing-policy)"

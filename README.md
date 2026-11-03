@@ -102,6 +102,31 @@ documents the protocol, which was worked out from USB traffic:
 | [`service.rs`](src/service.rs) | The Windows service. |
 | [`gui.rs`](src/gui.rs) + [`ui/app.slint`](ui/app.slint) | The app. |
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org). Signing is being set up; until it's in place,
+releases are unsigned.
+
+- Only builds made from this repository by the [Release workflow](.github/workflows/release.yml)
+  on GitHub Actions are signed. Each release links to the workflow run that built it.
+- Committers and reviewers: [Thnorty](https://github.com/Thnorty). Changes from anyone else come
+  in as pull requests and are reviewed before they're merged.
+- Approvers: [Thnorty](https://github.com/Thnorty). Every signing request is approved by hand.
+
+## Privacy
+
+This program will not transfer any information to other networked systems unless specifically
+requested by the user or the person installing or operating it.
+
+- **ffmpeg download:** only when you tick it in the installer or click it in the app. It
+  downloads the build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) and sends nothing
+  else.
+- **LibreHardwareMonitor:** if you turn it on, the app reads sensors from its web server on your
+  own PC (`127.0.0.1`). Nothing leaves the computer.
+
+There's no telemetry, no update check and no account.
+
 ## Disclaimer
 
 This is an independent project and is not affiliated with or endorsed by Monster Notebook /
