@@ -10,6 +10,10 @@ fn main() {
     }
     res.set("FileDescription", "AIO Cooler Screen");
     res.set("ProductName", "AIO Cooler Screen");
+    res.set("CompanyName", "AIO Cooler Screen contributors");
+    res.set("LegalCopyright", "Copyright (c) 2026 Thnorty. MIT License.");
+    res.set("OriginalFilename", "aio-screen.exe");
+    res.set("InternalName", "aio-screen");
     if let Err(e) = res.compile() {
         println!("cargo:warning=could not embed Windows resources: {e}");
     }

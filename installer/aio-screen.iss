@@ -13,6 +13,10 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher=AIO Cooler Screen contributors
+VersionInfoVersion={#AppVersion}
+VersionInfoProductName={#AppName}
+VersionInfoDescription={#AppName} Setup
+VersionInfoCopyright=Copyright (c) 2026 Thnorty. MIT License.
 ; The service runs as SYSTEM from here, so it must stay in an admin-only folder.
 DefaultDirName={autopf}\AIO Screen
 DisableDirPage=yes
