@@ -806,6 +806,26 @@ msgctxt "Rust"
 msgid "Could not restart the app"
 msgstr "Uygulama yeniden başlatılamadı"
 
+msgctxt "AppWindow"
+msgid "Animated"
+msgstr "Hareketli"
+
+msgctxt "AppWindow"
+msgid "Plays each built-in background as a looping animation."
+msgstr "Hazır arka planları döngüde oynayan animasyon olarak gösterir."
+
+msgctxt "AppWindow"
+msgid "Your backgrounds"
+msgstr "Arka planlarınız"
+
+msgctxt "AppWindow"
+msgid "Images and videos you've added. The app keeps its own copy, so you can delete the original files."
+msgstr "Eklediğiniz görseller ve videolar. Uygulama kendi kopyasını saklar; orijinal dosyaları silebilirsiniz."
+
+msgctxt "Rust"
+msgid "Could not load the background preview"
+msgstr "Arka plan önizlemesi yüklenemedi"
+
 # Text drawn on the cooler screen.
 
 msgctxt "Screen"

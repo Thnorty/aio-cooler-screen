@@ -20,7 +20,7 @@ Sensörlerin kullanılabilirliği ve gereken erişim izinleri donanıma göre de
 
 ## Diğer özellikler
 
-- **480 × 480 LCD arka planları:** Nebula, Aurora, Neon Rings ve Sunset adlı dört hazır arka plan; ayrıca PNG, JPG, BMP, WebP, animasyonlu GIF ve MP4, MOV, MKV, WebM gibi video dosyaları. Doldur, sığdır ve esnet seçenekleri.
+- **480 × 480 LCD arka planları:** Nebula, Aurora, Neon Rings ve Sunset adlı, döngüde oynayan animasyon ya da sabit görsel olarak kullanılabilen dört hazır arka plan; ayrıca PNG, JPG, BMP, WebP, animasyonlu GIF ve MP4, MOV, MKV, WebM gibi video dosyaları. Doldur, sığdır ve esnet seçenekleri. Eklediğiniz her dosya **Arka planlarınız** bölümünde kalır; orijinal dosyayı silseniz bile daha sonra yeniden seçebilirsiniz.
 - **Dört hazır istatistik tasarımı:** Halka göstergeler, gösterge paneli kartları, tek büyük istatistik ve saat + istatistik düzeni; renk, font, boyut, kenarlık ve arka plan karartma ayarları.
 - **Özel tasarım düzenleyicisi:** Metin, sensör değerleri, halka göstergeler, ilerleme çubukları, saat ve tarih bileşenlerini canlı önizlemede yerleştirme ve özelleştirme.
 - **Canlı CPU/GPU bilgileri:** Yerleşik CPU sıcaklığı ve yük ölçümü, NVML üzerinden NVIDIA GPU sıcaklığı ve yük ölçümü ve isteğe bağlı ek sensör kaynakları.

@@ -20,6 +20,7 @@ use crate::media::{self, Fit, IMAGE_EXTENSIONS, SCREEN_SIZE, VIDEO_EXTENSIONS};
 use crate::sensors::{Reading, Stat};
 use crate::desktop::{self, Instance, Prefs, Tray, TrayAction};
 use crate::i18n::{self, tr};
+use crate::library;
 use crate::{ffmpeg, icon, overlay, service};
 
 const STATUS_STALE_MS: u128 = 5_000;
@@ -39,18 +40,19 @@ const CLOCK_STATS: [ClockStats; 3] = [ClockStats::Temps, ClockStats::Loads, Cloc
 /// Displayed size of the LCD preview, in logical pixels (the canvas is 480).
 const PREVIEW_PX: f32 = 300.0;
 
-/// Backgrounds shipped with the app (made with tools/make-backgrounds.ps1).
-const BACKGROUNDS: [(&str, &[u8]); 4] = [
-    ("Nebula", include_bytes!("../assets/backgrounds/nebula.png")),
-    ("Aurora", include_bytes!("../assets/backgrounds/aurora.png")),
-    ("Neon rings", include_bytes!("../assets/backgrounds/neon-rings.png")),
-    ("Sunset", include_bytes!("../assets/backgrounds/sunset.png")),
+/// Backgrounds shipped with the app: name, still and looping video, ready for the screen
+/// (made with tools/make-backgrounds.ps1; the still is the video's first frame).
+const BACKGROUNDS: [(&str, &[u8], &[u8]); 4] = [
+    ("Nebula", include_bytes!("../assets/backgrounds/nebula.png"), include_bytes!("../assets/backgrounds/nebula.mp4")),
+    ("Aurora", include_bytes!("../assets/backgrounds/aurora.png"), include_bytes!("../assets/backgrounds/aurora.mp4")),
+    ("Neon rings", include_bytes!("../assets/backgrounds/neon-rings.png"), include_bytes!("../assets/backgrounds/neon-rings.mp4")),
+    ("Sunset", include_bytes!("../assets/backgrounds/sunset.png"), include_bytes!("../assets/backgrounds/sunset.mp4")),
 ];
 const BUILTIN_SUFFIX: &str = " (built-in)";
 
 enum Job {
     Poster(Result<RgbaImage, String>),
-    Media(Result<(String, bool, RgbaImage), String>, String),
+    Media(Result<(library::Item, RgbaImage), String>),
     ServiceRestarted(Result<(), String>),
     Autostart(Result<(), String>),
     FfmpegFound(Option<PathBuf>),
@@ -59,6 +61,8 @@ enum Job {
 
 struct State {
     cfg: Config,
+    /// "Your backgrounds", newest first.
+    library: Vec<library::Item>,
     readings: Vec<Reading>,
     live: bool,
     preview_bg: RgbaImage,
@@ -121,6 +125,7 @@ pub fn run(start_in_tray: bool, restart_after: Option<u32>) -> Result<(), String
         last_theme_check: Instant::now(),
         preview_bg: default_background(),
         cfg: Config::load(),
+        library: library::load(),
         readings: Vec::new(),
         live: false,
         jobs: mpsc::channel(),
@@ -145,6 +150,7 @@ pub fn run(start_in_tray: bool, restart_after: Option<u32>) -> Result<(), String
             if let Err(e) = s.cfg.save() { eprintln!("Failed to save screen language: {e}"); }
         }
     }
+    adopt_current_background(&mut state.borrow_mut());
     init_ui(&ui, &state.borrow());
     {
         let mut s = state.borrow_mut();
@@ -304,6 +310,16 @@ fn load_current_poster(state: &State) {
     let Some(path) = state.cfg.media_file.as_ref().map(|f| config::data_dir().join(f)).filter(|p| p.exists()) else {
         return;
     };
+    // Built-in and saved backgrounds have their still at hand; no ffmpeg needed.
+    if let Some((_, png, _)) = usize::try_from(builtin_index(&state.cfg)).ok().and_then(|i| BACKGROUNDS.get(i)) {
+        let png: &'static [u8] = png;
+        state.spawn(move || Job::Poster(image::load_from_memory(png).map(|i| i.to_rgba8()).map_err(|e| e.to_string())));
+        return;
+    }
+    if let Some(item) = state.library.iter().find(|i| Some(&i.file) == state.cfg.media_file.as_ref()).cloned() {
+        state.spawn(move || Job::Poster(item.poster().ok_or_else(|| tr("Could not load the background preview").to_string())));
+        return;
+    }
     let is_video = state.cfg.media_is_video;
     state.spawn(move || {
         Job::Poster(if is_video { media::video_poster(&path, Fit::Cover) } else { media::prepare_image(&path, Fit::Cover) })
@@ -333,10 +349,94 @@ fn index_of<T: PartialEq>(all: &[T], v: &T) -> i32 {
     all.iter().position(|x| x == v).unwrap_or(0) as i32
 }
 
-/// Which built-in background is on the screen, or -1.
+/// Which built-in background is on the screen (still or animated), or -1.
 fn builtin_index(cfg: &Config) -> i32 {
-    let Some(src) = cfg.media_source.as_deref().filter(|_| !cfg.media_is_video) else { return -1 };
-    BACKGROUNDS.iter().position(|(n, _)| format!("{n}{BUILTIN_SUFFIX}") == src).map_or(-1, |i| i as i32)
+    let Some(src) = cfg.media_source.as_deref() else { return -1 };
+    BACKGROUNDS.iter().position(|(n, _, _)| format!("{n}{BUILTIN_SUFFIX}") == src).map_or(-1, |i| i as i32)
+}
+
+/// Which saved background is on the screen, or -1.
+fn library_index(state: &State) -> i32 {
+    state.library.iter().position(|i| Some(&i.file) == state.cfg.media_file.as_ref()).map_or(-1, |i| i as i32)
+}
+
+/// Put a media file from the data dir on the screen and save the config. The previous file is
+/// deleted unless it belongs to "Your backgrounds".
+fn set_media(ui: &AppWindow, s: &mut State, file: String, is_video: bool, source: String) -> bool {
+    let old = s.cfg.media_file.replace(file);
+    s.cfg.media_is_video = is_video;
+    s.cfg.media_source = Some(source);
+    s.cfg.media_version += 1;
+    if let Err(e) = s.cfg.save() {
+        show_message(ui, false, format!("{}: {e}", tr("Could not save settings")));
+        return false;
+    }
+    if let Some(old) = old.filter(|o| Some(o) != s.cfg.media_file.as_ref() && !o.starts_with(library::PREFIX)) {
+        let _ = std::fs::remove_file(config::data_dir().join(old));
+    }
+    ui.set_media_name(media_label(&s.cfg).into());
+    ui.set_bg_selected(builtin_index(&s.cfg));
+    ui.set_lib_selected(library_index(s));
+    true
+}
+
+/// Write built-in background `i` to the data dir, as video or still, and put it on the screen.
+fn apply_builtin(ui: &AppWindow, s: &mut State, i: usize) {
+    let Some((name, png, mp4)) = BACKGROUNDS.get(i) else { return };
+    let animated = s.prefs.animate_backgrounds;
+    let file = format!("media-{}.{}", media::now_ms(), if animated { "mp4" } else { "png" });
+    let bytes: &[u8] = if animated { mp4 } else { png };
+    if let Err(e) = std::fs::create_dir_all(config::data_dir()).and_then(|_| std::fs::write(config::data_dir().join(&file), bytes)) {
+        show_message(ui, false, format!("{}: {e}", tr("Could not save background")));
+        return;
+    }
+    if !set_media(ui, s, file, animated, format!("{name}{BUILTIN_SUFFIX}")) {
+        return;
+    }
+    if let Ok(img) = image::load_from_memory(png) {
+        s.preview_bg = img.to_rgba8();
+    }
+    show_message(ui, true, format!("{name} {}", tr("sent to the cooler.")));
+    refresh_preview(ui, s);
+}
+
+/// Thumbnails and names for "Your backgrounds".
+fn refresh_library(ui: &AppWindow, state: &State) {
+    let thumbs: Vec<Image> = state
+        .library
+        .iter()
+        .map(|item| {
+            let img = item.poster().unwrap_or_else(|| RgbaImage::from_pixel(8, 8, image::Rgba([24, 24, 28, 255])));
+            to_image(&image::imageops::resize(&img, 184, 184, FilterType::Lanczos3))
+        })
+        .collect();
+    let names: Vec<SharedString> = state.library.iter().map(|i| SharedString::from(i.name.as_str())).collect();
+    let videos: Vec<bool> = state.library.iter().map(|i| i.video).collect();
+    ui.set_lib_thumbs(ModelRc::new(VecModel::from(thumbs)));
+    ui.set_lib_names(ModelRc::new(VecModel::from(names)));
+    ui.set_lib_videos(ModelRc::new(VecModel::from(videos)));
+    ui.set_lib_selected(library_index(state));
+}
+
+/// A background the user applied before "Your backgrounds" existed is a `media-…` file named
+/// after their original; move it into the library so it shows there.
+fn adopt_current_background(s: &mut State) {
+    let (Some(file), Some(name)) = (s.cfg.media_file.clone(), s.cfg.media_source.clone()) else { return };
+    if !file.starts_with("media-") || builtin_index(&s.cfg) >= 0 || !config::data_dir().join(&file).exists() {
+        return;
+    }
+    let video = s.cfg.media_is_video;
+    let poster = if video { media::video_poster(&config::data_dir().join(&file), Fit::Cover).ok() } else { None };
+    match library::adopt(&file, &name, video, poster.as_ref()) {
+        Ok(item) => {
+            s.cfg.media_file = Some(item.file.clone());
+            library::add_front(&mut s.library, item);
+            if let Err(e) = s.cfg.save().and_then(|_| library::save(&s.library)) {
+                eprintln!("Failed to save after moving the background into the library: {e}");
+            }
+        }
+        Err(e) => eprintln!("{e}"),
+    }
 }
 
 fn media_label(cfg: &Config) -> String {
@@ -365,13 +465,15 @@ fn init_ui(ui: &AppWindow, state: &State) {
     ui.set_widget_kinds(ModelRc::new(VecModel::from(kinds)));
     let bg_thumbs: Vec<Image> = BACKGROUNDS
         .iter()
-        .filter_map(|(_, png)| image::load_from_memory(png).ok())
+        .filter_map(|(_, png, _)| image::load_from_memory(png).ok())
         .map(|img| to_image(&img.resize_exact(184, 184, FilterType::Lanczos3).to_rgba8()))
         .collect();
     ui.set_bg_thumbs(ModelRc::new(VecModel::from(bg_thumbs)));
-    let bg_names: Vec<SharedString> = BACKGROUNDS.iter().map(|(n, _)| SharedString::from(*n)).collect();
+    let bg_names: Vec<SharedString> = BACKGROUNDS.iter().map(|(n, _, _)| SharedString::from(*n)).collect();
     ui.set_bg_names(ModelRc::new(VecModel::from(bg_names)));
     ui.set_bg_selected(builtin_index(&state.cfg));
+    ui.set_animate_backgrounds(state.prefs.animate_backgrounds);
+    refresh_library(ui, state);
     refresh_gallery(ui, state);
     let swatches: Vec<slint::Color> = SWATCHES.iter().map(|c| slint::Color::from_rgb_u8(c[0], c[1], c[2])).collect();
     ui.set_swatches(ModelRc::new(VecModel::from(swatches)));
@@ -894,28 +996,59 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
     let st = state.clone();
     ui.on_builtin_background(move |i| {
         let Some(ui) = weak.upgrade() else { return };
-        let Some((name, png)) = BACKGROUNDS.get(i.max(0) as usize) else { return };
+        apply_builtin(&ui, &mut st.borrow_mut(), i.max(0) as usize);
+    });
+
+    let weak = ui.as_weak();
+    let st = state.clone();
+    ui.on_animate_toggled(move |on| {
+        let Some(ui) = weak.upgrade() else { return };
         let mut s = st.borrow_mut();
-        let file = format!("media-{}.png", media::now_ms());
-        if let Err(e) = std::fs::create_dir_all(config::data_dir()).and_then(|_| std::fs::write(config::data_dir().join(&file), png)) {
-            show_message(&ui, false, format!("{}: {e}", tr("Could not save background")));
+        s.prefs.animate_backgrounds = on;
+        if let Err(e) = s.prefs.save() {
+            show_message(&ui, false, format!("{}: {e}", tr("Could not save preference")));
+        }
+        // Swap the built-in background on the screen to match.
+        if let Ok(i) = usize::try_from(builtin_index(&s.cfg)) {
+            apply_builtin(&ui, &mut s, i);
+        }
+    });
+
+    let weak = ui.as_weak();
+    let st = state.clone();
+    ui.on_library_background(move |i| {
+        let Some(ui) = weak.upgrade() else { return };
+        let mut s = st.borrow_mut();
+        let Some(item) = s.library.get(i.max(0) as usize).cloned() else { return };
+        if !item.path().exists() {
+            show_message(&ui, false, format!("{}: {}", tr("File not found"), item.path().display()));
             return;
         }
-        let old = s.cfg.media_file.replace(file);
-        s.cfg.media_is_video = false;
-        s.cfg.media_source = Some(format!("{name}{BUILTIN_SUFFIX}"));
-        s.cfg.media_version += 1;
-        save(&ui, &s);
-        if let Some(old) = old.filter(|o| Some(o) != s.cfg.media_file.as_ref()) {
-            let _ = std::fs::remove_file(config::data_dir().join(old));
+        if set_media(&ui, &mut s, item.file.clone(), item.video, item.name.clone()) {
+            if let Some(poster) = item.poster() {
+                s.preview_bg = poster;
+            }
+            show_message(&ui, true, tr("Sent to the cooler. It will update in a few seconds."));
+            refresh_preview(&ui, &s);
         }
-        if let Ok(img) = image::load_from_memory(png) {
-            s.preview_bg = img.to_rgba8();
+    });
+
+    let weak = ui.as_weak();
+    let st = state.clone();
+    ui.on_remove_library(move |i| {
+        let Some(ui) = weak.upgrade() else { return };
+        let mut s = st.borrow_mut();
+        let i = i.max(0) as usize;
+        // The background on the screen stays: the service may need its file again.
+        if i >= s.library.len() || library_index(&s) == i as i32 {
+            return;
         }
-        ui.set_media_name(media_label(&s.cfg).into());
-        ui.set_bg_selected(i);
-        show_message(&ui, true, format!("{name} {}", tr("sent to the cooler.")));
-        refresh_preview(&ui, &s);
+        let item = s.library.remove(i);
+        library::delete_files(&item);
+        if let Err(e) = library::save(&s.library) {
+            show_message(&ui, false, format!("{}: {e}", tr("Could not save settings")));
+        }
+        refresh_library(&ui, &s);
     });
 
     let weak = ui.as_weak();
@@ -947,8 +1080,7 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         ui.set_busy(true);
         ui.set_busy_text((if media::is_video(&src) { tr("Converting video…") } else { tr("Preparing image…") }).into());
         ui.set_message(SharedString::new());
-        let name = src.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-        st.borrow().spawn(move || Job::Media(prepare_into_data_dir(&src, fit), name));
+        st.borrow().spawn(move || Job::Media(library::prepare(&src, fit)));
     });
 
     let weak = ui.as_weak();
@@ -1103,25 +1235,18 @@ fn tick(ui: &AppWindow, state: &Rc<RefCell<State>>) {
                 refresh_preview(ui, &s);
             }
             Job::Poster(Err(e)) => show_message(ui, false, e),
-            Job::Media(result, source_name) => {
+            Job::Media(result) => {
                 ui.set_busy(false);
                 match result {
-                    Ok((file, is_video, poster)) => {
-                        let old = s.cfg.media_file.replace(file);
-                        s.cfg.media_is_video = is_video;
-                        s.cfg.media_source = Some(source_name);
-                        s.cfg.media_version += 1;
-                        match s.cfg.save() {
-                            Ok(()) => {
-                                if let Some(old) = old.filter(|o| Some(o) != s.cfg.media_file.as_ref()) {
-                                    let _ = std::fs::remove_file(config::data_dir().join(old));
-                                }
-                                show_message(ui, true, tr("Sent to the cooler. It will update in a few seconds."));
-                            }
-                            Err(e) => show_message(ui, false, format!("{}: {e}", tr("Could not save settings"))),
+                    Ok((item, poster)) => {
+                        library::add_front(&mut s.library, item.clone());
+                        if let Err(e) = library::save(&s.library) {
+                            show_message(ui, false, format!("{}: {e}", tr("Could not save settings")));
                         }
-                        ui.set_media_name(media_label(&s.cfg).into());
-                        ui.set_bg_selected(builtin_index(&s.cfg));
+                        if set_media(ui, &mut s, item.file, item.video, item.name) {
+                            show_message(ui, true, tr("Sent to the cooler. It will update in a few seconds."));
+                        }
+                        refresh_library(ui, &s);
                         s.preview_bg = poster;
                         refresh_preview(ui, &s);
                     }
@@ -1303,24 +1428,6 @@ fn update_stat_rows(s: &mut State) {
 
 // ---------------------------------------------------------------------------------------
 // Helpers
-
-/// Convert the user's file and store it in the data dir. Returns (file name, is_video, poster).
-fn prepare_into_data_dir(src: &Path, fit: Fit) -> Result<(String, bool, RgbaImage), String> {
-    let dir = config::data_dir();
-    std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
-    let stamp = media::now_ms();
-    if media::is_video(src) {
-        let name = format!("media-{stamp}.mp4");
-        media::prepare_video(src, fit, &dir.join(&name))?;
-        let poster = media::video_poster(&dir.join(&name), Fit::Cover)?;
-        Ok((name, true, poster))
-    } else {
-        let img = media::prepare_image(src, fit)?;
-        let name = format!("media-{stamp}.png");
-        std::fs::write(dir.join(&name), media::encode_png(&img)?).map_err(|e| format!("cannot save media: {e}"))?;
-        Ok((name, false, img))
-    }
-}
 
 fn wide(s: &std::ffi::OsStr) -> Vec<u16> {
     use std::os::windows::ffi::OsStrExt;

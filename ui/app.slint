@@ -139,7 +139,12 @@ component RoundTile inherits Rectangle {
     in property <image> thumb;
     in property <string> name;
     in property <bool> selected;
+    // Shows a remove button on hover (never on the selected tile).
+    in property <bool> removable;
+    // Marks the thumbnail as a video.
+    in property <bool> video;
     callback clicked;
+    callback remove;
     width: 112px;
     height: 150px;
     border-radius: 8px;
@@ -171,9 +176,38 @@ component RoundTile inherits Rectangle {
             font-size: 12px;
             color: Palette.foreground;
             wrap: word-wrap;
+            overflow: elide;
+            max-height: 32px;
         }
     }
     ta := TouchArea { clicked => { root.clicked(); } }
+    if root.video: Rectangle {
+        x: 72px;
+        y: 76px;
+        width: 26px;
+        height: 26px;
+        border-radius: 13px;
+        background: #000000b0;
+        Glyph { text: "\u{E768}"; font-size: 11px; color: #ffffff; }
+    }
+    if root.removable && !root.selected && (ta.has-hover || remove-ta.has-hover): Rectangle {
+        x: parent.width - 30px;
+        y: 4px;
+        width: 26px;
+        height: 26px;
+        border-radius: 13px;
+        background: remove-ta.has-hover ? #c42b1c : #000000b0;
+        Glyph { text: "\u{E711}"; font-size: 11px; color: #ffffff; }
+    }
+    // Declared last so it sits above the tile's own click area.
+    remove-ta := TouchArea {
+        x: parent.width - 30px;
+        y: 4px;
+        width: 26px;
+        height: 26px;
+        enabled: root.removable && !root.selected;
+        clicked => { root.remove(); }
+    }
 }
 
 component NewDesignTile inherits Rectangle {
@@ -302,6 +336,12 @@ export component AppWindow inherits Window {
     in property <[image]> bg-thumbs;
     in property <[string]> bg-names;
     in property <int> bg-selected: -1;
+    in-out property <bool> animate-backgrounds: true;
+    // "Your backgrounds": the user's saved images and videos.
+    in property <[image]> lib-thumbs;
+    in property <[string]> lib-names;
+    in property <[bool]> lib-videos;
+    in property <int> lib-selected: -1;
     in property <string> media-name;
     in-out property <string> source-path;
     in property <bool> source-is-video;
@@ -399,6 +439,9 @@ export component AppWindow inherits Window {
     in property <bool> display-off;
 
     callback builtin-background(int);
+    callback animate-toggled(bool);
+    callback library-background(int);
+    callback remove-library(int);
     callback browse();
     callback apply-media();
     callback design-selected(int);
@@ -546,6 +589,36 @@ export component AppWindow inherits Window {
                                     name: root.bg-names[i];
                                     selected: root.bg-selected == i;
                                     clicked => { root.builtin-background(i); }
+                                }
+                            }
+                            SettingRow {
+                                label: @tr("Animated");
+                                hint: @tr("Plays each built-in background as a looping animation.");
+                                Switch {
+                                    checked <=> root.animate-backgrounds;
+                                    toggled => { root.animate-toggled(self.checked); }
+                                }
+                            }
+                        }
+                        if root.lib-thumbs.length > 0: Card {
+                            title: @tr("Your backgrounds");
+                            subtitle: @tr("Images and videos you've added. The app keeps its own copy, so you can delete the original files.");
+                            ScrollView {
+                                height: 168px;
+                                content-width: library.preferred-width;
+                                content-height: 160px;
+                                library := HorizontalLayout {
+                                    spacing: 8px;
+                                    alignment: start;
+                                    for thumb[i] in root.lib-thumbs: RoundTile {
+                                        thumb: thumb;
+                                        name: root.lib-names[i];
+                                        video: root.lib-videos[i];
+                                        selected: root.lib-selected == i;
+                                        removable: true;
+                                        clicked => { root.library-background(i); }
+                                        remove => { root.remove-library(i); }
+                                    }
                                 }
                             }
                         }

@@ -599,7 +599,7 @@ mod tests {
     }
 }
 
-fn write_atomic(path: PathBuf, bytes: &[u8]) -> Result<(), String> {
+pub(crate) fn write_atomic(path: PathBuf, bytes: &[u8]) -> Result<(), String> {
     std::fs::create_dir_all(data_dir()).map_err(|e| format!("cannot create {}: {e}", data_dir().display()))?;
     let tmp = path.with_extension("tmp");
     std::fs::write(&tmp, bytes).map_err(|e| format!("cannot write {}: {e}", tmp.display()))?;

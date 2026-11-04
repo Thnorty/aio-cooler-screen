@@ -8,6 +8,7 @@ mod ffmpeg;
 mod gui;
 mod i18n;
 mod icon;
+mod library;
 mod media;
 mod overlay;
 mod protocol;

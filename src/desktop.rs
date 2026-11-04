@@ -25,6 +25,12 @@ const PERSONALIZE_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Themes
 const INSTANCE_MUTEX: &str = r"Local\AioCoolerScreenGui";
 const SHOW_EVENT: &str = r"Local\AioCoolerScreenShow";
 
+/// A copy pointed at a test data folder (AIO_DATA_DIR) gets its own single-instance names, so
+/// it can run next to the installed app.
+fn instance_name(base: &str) -> String {
+    if std::env::var_os("AIO_DATA_DIR").is_some() { format!("{base}Test") } else { base.to_string() }
+}
+
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(Some(0)).collect()
 }
@@ -44,11 +50,13 @@ pub struct Prefs {
     /// Draw the window with the GPU (Skia on Direct3D); off uses Skia's CPU renderer.
     /// Read at startup only.
     pub hardware_acceleration: bool,
+    /// Built-in backgrounds go on the screen as their looping videos rather than stills.
+    pub animate_backgrounds: bool,
 }
 
 impl Default for Prefs {
     fn default() -> Self {
-        Prefs { show_tray: true, language: 0, preview_shape: 0, hardware_acceleration: true }
+        Prefs { show_tray: true, language: 0, preview_shape: 0, hardware_acceleration: true, animate_backgrounds: true }
     }
 }
 
@@ -151,9 +159,9 @@ pub enum Instance {
 pub fn claim_instance() -> Instance {
     // SAFETY: plain Win32 object creation with NUL-terminated names.
     unsafe {
-        let mutex = CreateMutexW(std::ptr::null(), 0, wide(INSTANCE_MUTEX).as_ptr());
+        let mutex = CreateMutexW(std::ptr::null(), 0, wide(&instance_name(INSTANCE_MUTEX)).as_ptr());
         if GetLastError() == ERROR_ALREADY_EXISTS {
-            let ev = OpenEventW(EVENT_MODIFY_STATE, 0, wide(SHOW_EVENT).as_ptr());
+            let ev = OpenEventW(EVENT_MODIFY_STATE, 0, wide(&instance_name(SHOW_EVENT)).as_ptr());
             if !ev.is_null() {
                 SetEvent(ev);
                 CloseHandle(ev);
@@ -180,7 +188,7 @@ pub fn wait_for_exit(pid: u32, timeout_ms: u32) {
 /// Call `on_show` (from a background thread) whenever another launch asks us to show.
 pub fn listen_for_show(on_show: impl Fn() + Send + 'static) {
     // SAFETY: auto-reset event owned by the listener thread for the life of the process.
-    let ev = unsafe { CreateEventW(std::ptr::null(), 0, 0, wide(SHOW_EVENT).as_ptr()) } as usize;
+    let ev = unsafe { CreateEventW(std::ptr::null(), 0, 0, wide(&instance_name(SHOW_EVENT)).as_ptr()) } as usize;
     if ev == 0 {
         return;
     }
