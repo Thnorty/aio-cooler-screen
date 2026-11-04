@@ -1,5 +1,9 @@
 fn main() {
-    let config = slint_build::CompilerConfiguration::new().with_style("fluent".into());
+    // Turkish strings for @tr live in translations/tr/LC_MESSAGES/aio-screen.po.
+    let config = slint_build::CompilerConfiguration::new()
+        .with_style("fluent".into())
+        .with_bundled_translations("translations");
+    println!("cargo:rerun-if-changed=translations");
     slint_build::compile_with_config("ui/app.slint", config).expect("compile ui/app.slint");
 
     // Embed the exe icon and version info (assets/icon.ico is produced by `aio-screen make-icon assets`).

@@ -6,6 +6,7 @@ mod desktop;
 mod device;
 mod ffmpeg;
 mod gui;
+mod i18n;
 mod icon;
 mod media;
 mod overlay;

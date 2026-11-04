@@ -1,0 +1,779 @@
+# Turkish translation of AIO Cooler Screen.
+# msgctxt is the .slint component a string appears in, or "Rust" for strings set from Rust code.
+# Strings are matched on msgctxt + msgid, so edit only the msgstr lines.
+msgid ""
+msgstr ""
+"Project-Id-Version: aio-screen\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "NewDesignTile"
+msgid "New design"
+msgstr "Yeni tasarım"
+
+msgctxt "AppWindow"
+msgid "Background"
+msgstr "Arka plan"
+
+msgctxt "AppWindow"
+msgid "Design"
+msgstr "Tasarım"
+
+msgctxt "AppWindow"
+msgid "Sensors"
+msgstr "Sensörler"
+
+msgctxt "AppWindow"
+msgid "Settings"
+msgstr "Ayarlar"
+
+msgctxt "AppWindow"
+msgid "Turn on display"
+msgstr "Ekranı aç"
+
+msgctxt "AppWindow"
+msgid "Turn off display"
+msgstr "Ekranı kapat"
+
+msgctxt "AppWindow"
+msgid "Display off"
+msgstr "Ekran kapalı"
+
+msgctxt "AppWindow"
+msgid "What the screen shows behind your stats."
+msgstr "İstatistiklerin arkasında gösterilecek görüntü."
+
+msgctxt "AppWindow"
+msgid "Built-in backgrounds"
+msgstr "Hazır arka planlar"
+
+msgctxt "AppWindow"
+msgid "Click one to put it on the screen."
+msgstr "Ekrana uygulamak için birini seç."
+
+msgctxt "AppWindow"
+msgid "Your image or video"
+msgstr "Görselin veya videon"
+
+msgctxt "AppWindow"
+msgid "PNG, JPG, BMP, WebP, or MP4/MOV/MKV/WebM/AVI/WMV videos and animated GIFs."
+msgstr "PNG, JPG, BMP, WebP görselleri; MP4/MOV/MKV/WebM/AVI/WMV videoları ve hareketli GIF dosyaları."
+
+msgctxt "AppWindow"
+msgid "Choose a file…"
+msgstr "Dosya seç…"
+
+msgctxt "AppWindow"
+msgid "Browse…"
+msgstr "Gözat…"
+
+msgctxt "AppWindow"
+msgid "Downloading ffmpeg…"
+msgstr "ffmpeg indiriliyor…"
+
+msgctxt "AppWindow"
+msgid "Videos need ffmpeg, which isn't installed yet."
+msgstr "Videolar için ffmpeg gerekiyor; henüz kurulu değil."
+
+msgctxt "AppWindow"
+msgid "Download ffmpeg"
+msgstr "ffmpeg indir"
+
+msgctxt "AppWindow"
+msgid "Fit"
+msgstr "Sığdır"
+
+msgctxt "AppWindow"
+msgid "Crop to fill"
+msgstr "Dolduracak şekilde kırp"
+
+msgctxt "AppWindow"
+msgid "Fit inside (black bars)"
+msgstr "Sığdır (siyah kenarlar)"
+
+msgctxt "AppWindow"
+msgid "Stretch"
+msgstr "Esnet"
+
+msgctxt "AppWindow"
+msgid "Apply to screen"
+msgstr "Ekrana uygula"
+
+msgctxt "AppWindow"
+msgid "How live stats are drawn on top of the background. Each design keeps its own settings."
+msgstr "Canlı verilerin arka plan üzerinde görünümü. Her tasarımın ayarları ayrıdır."
+
+msgctxt "AppWindow"
+msgid "Show live stats"
+msgstr "Canlı verileri göster"
+
+msgctxt "AppWindow"
+msgid "Turn off to show only the background."
+msgstr "Yalnızca arka planı göstermek için kapat."
+
+msgctxt "AppWindow"
+msgid "Designs"
+msgstr "Tasarımlar"
+
+msgctxt "AppWindow"
+msgid "Add widgets, pick one to change it, and drag widgets in the preview to move them."
+msgstr "Bileşen ekle, düzenlemek için seç ve önizlemede sürükleyerek taşı."
+
+msgctxt "AppWindow"
+msgid "Name"
+msgstr "Ad"
+
+msgctxt "AppWindow"
+msgid "24-hour time"
+msgstr "24 saat biçimi"
+
+msgctxt "AppWindow"
+msgid "Off shows AM/PM in time widgets."
+msgstr "Kapatıldığında saat bileşenlerinde AM/PM gösterilir."
+
+msgctxt "AppWindow"
+msgid "Add widget"
+msgstr "Bileşen ekle"
+
+msgctxt "AppWindow"
+msgid "Duplicate"
+msgstr "Kopyala"
+
+msgctxt "AppWindow"
+msgid "Delete design"
+msgstr "Tasarımı sil"
+
+msgctxt "AppWindow"
+msgid "No widgets yet. Add one above."
+msgstr "Henüz bileşen yok. Yukarıdan ekleyebilirsin."
+
+msgctxt "AppWindow"
+msgid "Sensor"
+msgstr "Sensör"
+
+msgctxt "AppWindow"
+msgid "Fan/pump (RPM), temperature, power, voltage, clocks and more. Sorted by type."
+msgstr "Fan/pompa (RPM), sıcaklık, güç, voltaj, frekans ve daha fazlası. Türe göre sıralanır."
+
+msgctxt "AppWindow"
+msgid "Gauge maximum"
+msgstr "Gösterge üst sınırı"
+
+msgctxt "AppWindow"
+msgid "Only for direct sensor rings/bars (RPM, W, V, MHz etc.)."
+msgstr "Doğrudan sensör halkaları/çubukları için (RPM, W, V, MHz vb.)."
+
+msgctxt "AppWindow"
+msgid "Text"
+msgstr "Metin"
+
+msgctxt "AppWindow"
+msgid "Thickness"
+msgstr "Kalınlık"
+
+msgctxt "AppWindow"
+msgid "Position"
+msgstr "Konum"
+
+msgctxt "AppWindow"
+msgid "Bold"
+msgstr "Kalın yazı"
+
+msgctxt "AppWindow"
+msgid "Use design colours"
+msgstr "Tasarım renklerini kullan"
+
+msgctxt "AppWindow"
+msgid "Text colour for text; temperature or accent colour for gauges."
+msgstr "Metinler için yazı rengi; göstergeler için sıcaklık veya vurgu rengi."
+
+msgctxt "AppWindow"
+msgid "Color"
+msgstr "Renk"
+
+msgctxt "AppWindow"
+msgid "Bring forward"
+msgstr "Öne getir"
+
+msgctxt "AppWindow"
+msgid "Send backward"
+msgstr "Arkaya gönder"
+
+msgctxt "AppWindow"
+msgid "Delete widget"
+msgstr "Bileşeni sil"
+
+msgctxt "AppWindow"
+msgid "Load rings"
+msgstr "Yük halkaları"
+
+msgctxt "AppWindow"
+msgid "Thin inner rings for CPU and GPU load."
+msgstr "CPU ve GPU kullanımı için ince iç halkalar."
+
+msgctxt "AppWindow"
+msgid "Labels"
+msgstr "Etiketler"
+
+msgctxt "AppWindow"
+msgid "CPU / GPU titles and load text."
+msgstr "CPU/GPU başlıkları ve kullanım metinleri."
+
+msgctxt "AppWindow"
+msgid "Ring thickness"
+msgstr "Halka kalınlığı"
+
+msgctxt "AppWindow"
+msgid "Tiles"
+msgstr "Kutucuklar"
+
+msgctxt "AppWindow"
+msgid "CPU temp"
+msgstr "CPU sıcaklığı"
+
+msgctxt "AppWindow"
+msgid "CPU load"
+msgstr "CPU kullanımı"
+
+msgctxt "AppWindow"
+msgid "GPU temp"
+msgstr "GPU sıcaklığı"
+
+msgctxt "AppWindow"
+msgid "GPU load"
+msgstr "GPU kullanımı"
+
+msgctxt "AppWindow"
+msgid "Layout"
+msgstr "Yerleşim"
+
+msgctxt "AppWindow"
+msgid "One column"
+msgstr "Tek sütun"
+
+msgctxt "AppWindow"
+msgid "Two columns"
+msgstr "İki sütun"
+
+msgctxt "AppWindow"
+msgid "Top"
+msgstr "Üst"
+
+msgctxt "AppWindow"
+msgid "Center"
+msgstr "Orta"
+
+msgctxt "AppWindow"
+msgid "Bottom"
+msgstr "Alt"
+
+msgctxt "AppWindow"
+msgid "Panels behind tiles"
+msgstr "Kutucukların arkasında paneller"
+
+msgctxt "AppWindow"
+msgid "Panel opacity"
+msgstr "Panel saydamlığı"
+
+msgctxt "AppWindow"
+msgid "Stat to show"
+msgstr "Gösterilecek değer"
+
+msgctxt "AppWindow"
+msgid "CPU temperature"
+msgstr "CPU sıcaklığı"
+
+msgctxt "AppWindow"
+msgid "GPU temperature"
+msgstr "GPU sıcaklığı"
+
+msgctxt "AppWindow"
+msgid "Progress ring"
+msgstr "İlerleme halkası"
+
+msgctxt "AppWindow"
+msgid "Tick marks"
+msgstr "İşaret çizgileri"
+
+msgctxt "AppWindow"
+msgid "Second line"
+msgstr "İkinci satır"
+
+msgctxt "AppWindow"
+msgid "Shows the related load or temperature underneath."
+msgstr "İlgili kullanım veya sıcaklık değerini altında gösterir."
+
+msgctxt "AppWindow"
+msgid "24-hour clock"
+msgstr "24 saatlik saat"
+
+msgctxt "AppWindow"
+msgid "Off shows AM/PM."
+msgstr "Kapatıldığında AM/PM gösterilir."
+
+msgctxt "AppWindow"
+msgid "Seconds ring"
+msgstr "Saniye halkası"
+
+msgctxt "AppWindow"
+msgid "Date"
+msgstr "Tarih"
+
+msgctxt "AppWindow"
+msgid "Stats under the clock"
+msgstr "Saatin altında istatistikler"
+
+msgctxt "AppWindow"
+msgid "Temperatures"
+msgstr "Sıcaklıklar"
+
+msgctxt "AppWindow"
+msgid "Loads"
+msgstr "Kullanım oranları"
+
+msgctxt "AppWindow"
+msgid "None"
+msgstr "Yok"
+
+msgctxt "AppWindow"
+msgid "Style"
+msgstr "Görünüm"
+
+msgctxt "AppWindow"
+msgid "Font"
+msgstr "Yazı tipi"
+
+msgctxt "AppWindow"
+msgid "Text size"
+msgstr "Yazı boyutu"
+
+msgctxt "AppWindow"
+msgid "Text outline"
+msgstr "Metin kenarlığı"
+
+msgctxt "AppWindow"
+msgid "A dark edge so text reads well on bright backgrounds."
+msgstr "Açık renkli arka planlarda okunabilirlik için koyu metin kenarlığı."
+
+msgctxt "AppWindow"
+msgid "Text colour"
+msgstr "Metin rengi"
+
+msgctxt "AppWindow"
+msgid "Accent colour"
+msgstr "Vurgu rengi"
+
+msgctxt "AppWindow"
+msgid "Rings, bars and highlights."
+msgstr "Halkalar, çubuklar ve vurgular."
+
+msgctxt "AppWindow"
+msgid "Colour temperatures"
+msgstr "Sıcaklıklara göre renklendir"
+
+msgctxt "AppWindow"
+msgid "Blue when cool through green and amber to red when hot."
+msgstr "Soğukken mavi, ardından yeşil ve sarı; sıcakken kırmızı."
+
+msgctxt "AppWindow"
+msgid "Darken background"
+msgstr "Arka planı karart"
+
+msgctxt "AppWindow"
+msgid "Preview"
+msgstr "Önizleme"
+
+msgctxt "AppWindow"
+msgid "Click a widget to select it, drag to move it."
+msgstr "Seçmek için bileşene tıkla, taşımak için sürükle."
+
+msgctxt "AppWindow"
+msgid "Live values from the service."
+msgstr "Hizmetten gelen canlı değerler."
+
+msgctxt "AppWindow"
+msgid "Sample values until sensors report."
+msgstr "Sensörlerden veri gelene kadar örnek değerler."
+
+msgctxt "AppWindow"
+msgid "Screen shape:"
+msgstr "Ekran şekli:"
+
+msgctxt "AppWindow"
+msgid "Square"
+msgstr "Kare"
+
+msgctxt "AppWindow"
+msgid "Round"
+msgstr "Yuvarlak"
+
+msgctxt "AppWindow"
+msgid "No stats"
+msgstr "İstatistik yok"
+
+msgctxt "AppWindow"
+msgid "No sensor data yet. See the Sensors page."
+msgstr "Henüz sensör verisi yok. Sensörler sayfasını kontrol et."
+
+msgctxt "AppWindow"
+msgid "The official Monster app is running. Close it so it doesn't fight over the screen."
+msgstr "Resmî Monster uygulaması açık. Ekran çakışmasını önlemek için kapat."
+
+msgctxt "AppWindow"
+msgid "Where each stat comes from. Auto picks the CPU package temperature and your discrete GPU."
+msgstr "Değerlerin alındığı kaynaklar. Otomatik seçim CPU paket sıcaklığını ve haricî GPU'yu kullanır."
+
+msgctxt "AppWindow"
+msgid "Stats"
+msgstr "İstatistikler"
+
+msgctxt "AppWindow"
+msgid "Sources"
+msgstr "Kaynaklar"
+
+msgctxt "AppWindow"
+msgid "CPU temperature and load are read directly. Internal LHM provides additional hardware sensors; HWiNFO and external LibreHardwareMonitor remain optional."
+msgstr "CPU sıcaklığı ve kullanımı doğrudan okunur. Dahili LHM ek donanım sensörlerini sağlar; HWiNFO ve harici LibreHardwareMonitor isteğe bağlıdır."
+
+msgctxt "AppWindow"
+msgid "Internal LHM: bundled with the installer; no separate LibreHardwareMonitor app or web server needed. Some hardware may be unsupported.\nOptional alternatives:\nHWiNFO: open Settings, enable \"Shared Memory Support\" and keep HWiNFO running. The free version turns this off after 12 hours.\nExternal LibreHardwareMonitor: run as administrator and enable Options > Remote Web Server > Run. Configure the port below."
+msgstr "Dahili LHM: Kurulum paketiyle birlikte gelir; ayrı LibreHardwareMonitor uygulaması veya web sunucusu gerekmez. Bazı donanımlar desteklenmeyebilir.\nİsteğe bağlı alternatifler:\nHWiNFO: Ayarlardan \"Shared Memory Support\" seçeneğini açıp HWiNFO uygulamasını çalışır bırak. Ücretsiz sürümde bu özellik 12 saat sonra kapanır.\nHarici LibreHardwareMonitor: yönetici olarak aç ve Options > Remote Web Server > Run seçeneğini etkinleştir. Aşağıdaki port ayarını kullan."
+
+msgctxt "AppWindow"
+msgid "Get HWiNFO"
+msgstr "HWiNFO indir"
+
+msgctxt "AppWindow"
+msgid "Get LibreHardwareMonitor"
+msgstr "LibreHardwareMonitor indir"
+
+msgctxt "AppWindow"
+msgid "External LibreHardwareMonitor web server port"
+msgstr "Harici LibreHardwareMonitor web sunucusu portu"
+
+msgctxt "AppWindow"
+msgid "Language / Dil"
+msgstr "Dil / Language"
+
+msgctxt "AppWindow"
+msgid "Choose the interface language. Your choice is saved."
+msgstr "Arayüz dilini seçin. Seçiminiz kaydedilir."
+
+msgctxt "AppWindow"
+msgid "Interface language"
+msgstr "Arayüz dili"
+
+msgctxt "AppWindow"
+msgid "Background service"
+msgstr "Arka plan hizmeti"
+
+msgctxt "AppWindow"
+msgid "Starts with Windows, talks to the cooler and keeps the screen awake."
+msgstr "Windows ile başlar, soğutucuyla iletişim kurar ve ekranı açık tutar."
+
+msgctxt "AppWindow"
+msgid "Status"
+msgstr "Durum"
+
+msgctxt "AppWindow"
+msgid "Cooler"
+msgstr "Soğutucu"
+
+msgctxt "AppWindow"
+msgid "Restart service"
+msgstr "Hizmeti yeniden başlat"
+
+msgctxt "AppWindow"
+msgid "Open log"
+msgstr "Günlüğü aç"
+
+msgctxt "AppWindow"
+msgid "Open data folder"
+msgstr "Veri klasörünü aç"
+
+msgctxt "AppWindow"
+msgid "Startup"
+msgstr "Başlangıç"
+
+msgctxt "AppWindow"
+msgid "Start with Windows"
+msgstr "Windows ile başlat"
+
+msgctxt "AppWindow"
+msgid "Puts your design on the cooler right after boot, before you sign in. Changing it asks for admin rights."
+msgstr "Tasarımını oturum açmadan önce ekrana uygular. Değişiklik yönetici izni ister."
+
+msgctxt "AppWindow"
+msgid "Show icon in system tray"
+msgstr "Sistem tepsisinde simge göster"
+
+msgctxt "AppWindow"
+msgid "Closing the window keeps the app in the tray. Turn off to quit when the window closes."
+msgstr "Pencere kapansa da uygulama tepside çalışır. Pencere kapatılınca çıkmak için devre dışı bırak."
+
+msgctxt "AppWindow"
+msgid "Open in tray at login"
+msgstr "Oturum açınca tepside başlat"
+
+msgctxt "AppWindow"
+msgid "Only the tray icon appears; click it to open this window."
+msgstr "Yalnızca tepsi simgesi görünür; pencereyi açmak için tıkla."
+
+msgctxt "AppWindow"
+msgid "Needs the tray icon."
+msgstr "Tepsi simgesi gerekli."
+
+msgctxt "AppWindow"
+msgid "Video support"
+msgstr "Video desteği"
+
+msgctxt "AppWindow"
+msgid "ffmpeg is needed only for video and GIF backgrounds. It's kept private to this app and doesn't change PATH."
+msgstr "ffmpeg yalnızca video ve GIF arka planları için gerekir; sistem PATH ayarını değiştirmez."
+
+msgctxt "AppWindow"
+msgid "Download ffmpeg (about 90 MB)"
+msgstr "ffmpeg indir (yaklaşık 90 MB)"
+
+msgctxt "AppWindow"
+msgid "About"
+msgstr "Hakkında"
+
+msgctxt "AppWindow"
+msgid "Backgrounds and live stats for the Monster AIO Cooler LCD. CPU temperatures are read through the open-source PawnIO driver, CPU load from Windows and NVIDIA GPUs through the driver's NVML; Internal LHM reads additional sensors without a separate web server; HWiNFO and external LibreHardwareMonitor remain supported alternatives. Videos are converted with ffmpeg. See THIRD-PARTY-NOTICES.md in the install folder."
+msgstr "Monster AIO Cooler LCD için arka planlar ve canlı istatistikler. CPU sıcaklığı açık kaynak PawnIO sürücüsünden, CPU kullanımı Windows'tan ve NVIDIA GPU değerleri NVML üzerinden okunur. Dahili LHM ek sensörleri ayrı web sunucusu olmadan okur; HWiNFO ve harici LibreHardwareMonitor alternatif olarak desteklenir. Videolar ffmpeg ile dönüştürülür. Ayrıntılar kurulum klasöründeki THIRD-PARTY-NOTICES.md dosyasında."
+
+msgctxt "AppWindow"
+msgid "Edit {}"
+msgstr "Düzenle: {}"
+
+msgctxt "AppWindow"
+msgid "{} options"
+msgstr "{} seçenekleri"
+
+msgctxt "AppWindow"
+msgid "x {}, y {} (or drag in the preview)"
+msgstr "x {}, y {} (veya önizlemede sürükle)"
+
+msgctxt "AppWindow"
+msgid "Text and colours of {}."
+msgstr "Metin ve renkler: {}."
+
+msgctxt "AppWindow"
+msgid "Last error: {}"
+msgstr "Son hata: {}"
+
+msgctxt "AppWindow"
+msgid "AIO Cooler Screen {}. Not affiliated with Monster."
+msgstr "AIO Cooler Screen {}. Monster ile bağlantılı değildir."
+
+msgctxt "Rust"
+msgid "Could not create the tray icon"
+msgstr "Sistem tepsisi simgesi oluşturulamadı"
+
+msgctxt "Rust"
+msgid "Custom"
+msgstr "Özel"
+
+msgctxt "Rust"
+msgid "Your video"
+msgstr "Videon"
+
+msgctxt "Rust"
+msgid "Your image"
+msgstr "Görselin"
+
+msgctxt "Rust"
+msgid "No background set"
+msgstr "Arka plan ayarlanmadı"
+
+msgctxt "Rust"
+msgid "Checking…"
+msgstr "Kontrol ediliyor…"
+
+msgctxt "Rust"
+msgid "Radius"
+msgstr "Yarıçap"
+
+msgctxt "Rust"
+msgid "Width"
+msgstr "Genişlik"
+
+msgctxt "Rust"
+msgid "Text size"
+msgstr "Metin boyutu"
+
+msgctxt "Rust"
+msgid "Offline"
+msgstr "Çevrimdışı"
+
+msgctxt "Rust"
+msgid "Could not save settings"
+msgstr "Ayarlar kaydedilemedi"
+
+msgctxt "Rust"
+msgid "Found on PATH"
+msgstr "PATH üzerinde bulundu"
+
+msgctxt "Rust"
+msgid "Not installed"
+msgstr "Kurulu değil"
+
+msgctxt "Rust"
+msgid "My design"
+msgstr "Tasarımım"
+
+msgctxt "Rust"
+msgid "Could not save background"
+msgstr "Arka plan kaydedilemedi"
+
+msgctxt "Rust"
+msgid "sent to the cooler."
+msgstr "soğutucuya gönderildi."
+
+msgctxt "Rust"
+msgid "Images and videos"
+msgstr "Görseller ve videolar"
+
+msgctxt "Rust"
+msgid "File not found"
+msgstr "Dosya bulunamadı"
+
+msgctxt "Rust"
+msgid "Converting video…"
+msgstr "Video dönüştürülüyor…"
+
+msgctxt "Rust"
+msgid "Preparing image…"
+msgstr "Görsel hazırlanıyor…"
+
+msgctxt "Rust"
+msgid "Restarting service…"
+msgstr "Hizmet yeniden başlatılıyor…"
+
+msgctxt "Rust"
+msgid "Approve the admin prompt to restart the background service."
+msgstr "Arka plan hizmetini yeniden başlatmak için yönetici iznini onayla."
+
+msgctxt "Rust"
+msgid "Could not save preference"
+msgstr "Ayar kaydedilemedi"
+
+msgctxt "Rust"
+msgid "Sent to the cooler. It will update in a few seconds."
+msgstr "Soğutucuya gönderildi. Birkaç saniye içinde güncellenir."
+
+msgctxt "Rust"
+msgid "Background service restarted."
+msgstr "Arka plan hizmeti yeniden başlatıldı."
+
+msgctxt "Rust"
+msgid "ffmpeg download failed"
+msgstr "ffmpeg indirme başarısız"
+
+msgctxt "Rust"
+msgid "Running"
+msgstr "Çalışıyor"
+
+msgctxt "Rust"
+msgid "Stopped"
+msgstr "Durduruldu"
+
+msgctxt "Rust"
+msgid "Starting…"
+msgstr "Başlatılıyor…"
+
+msgctxt "Rust"
+msgid "Stopping…"
+msgstr "Durduruluyor…"
+
+msgctxt "Rust"
+msgid "Busy"
+msgstr "Meşgul"
+
+msgctxt "Rust"
+msgid "Cooler connected"
+msgstr "Soğutucu bağlı"
+
+msgctxt "Rust"
+msgid "Cooler not found"
+msgstr "Soğutucu bulunamadı"
+
+msgctxt "Rust"
+msgid "Waiting for service…"
+msgstr "Hizmet bekleniyor…"
+
+msgctxt "Rust"
+msgid "Service not running"
+msgstr "Hizmet çalışmıyor"
+
+msgctxt "Rust"
+msgid "No readings from service yet."
+msgstr "Hizmetten henüz veri alınamadı."
+
+msgctxt "Rust"
+msgid "Automatic"
+msgstr "Otomatik"
+
+msgctxt "Rust"
+msgid "Ring gauges"
+msgstr "Halka göstergeleri"
+
+msgctxt "Rust"
+msgid "Dashboard tiles"
+msgstr "Gösterge panosu"
+
+msgctxt "Rust"
+msgid "Big single stat"
+msgstr "Büyük istatistik"
+
+msgctxt "Rust"
+msgid "Clock and stats"
+msgstr "Saat ve istatistikler"
+
+msgctxt "Rust"
+msgid "Stat value"
+msgstr "İstatistik değeri"
+
+msgctxt "Rust"
+msgid "Text"
+msgstr "Metin"
+
+msgctxt "Rust"
+msgid "Ring gauge"
+msgstr "Halka göstergesi"
+
+msgctxt "Rust"
+msgid "Progress bar"
+msgstr "İlerleme çubuğu"
+
+msgctxt "Rust"
+msgid "Time"
+msgstr "Saat"
+
+msgctxt "Rust"
+msgid "Date"
+msgstr "Tarih"
+
+msgctxt "Rust"
+msgid "Turn on display"
+msgstr "Ekranı aç"
+
+msgctxt "Rust"
+msgid "Turn off display"
+msgstr "Ekranı kapat"
+
+msgctxt "Rust"
+msgid "Open AIO Cooler Screen"
+msgstr "AIO Cooler Screen'i aç"
+
+msgctxt "Rust"
+msgid "Show live stats"
+msgstr "Canlı verileri göster"
+
+msgctxt "Rust"
+msgid "Quit"
+msgstr "Çıkış"

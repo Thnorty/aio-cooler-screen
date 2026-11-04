@@ -13,6 +13,7 @@ use windows_sys::Win32::System::Registry::{
 };
 use windows_sys::Win32::System::Threading::{CreateEventW, CreateMutexW, OpenEventW, SetEvent, WaitForSingleObject, EVENT_MODIFY_STATE, INFINITE};
 
+use crate::i18n::tr;
 use crate::icon;
 
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -188,17 +189,11 @@ pub struct Tray {
     stats: CheckMenuItem,
     display: MenuItem,
     quit: MenuItem,
-    language: Cell<i32>,
     display_off: Cell<bool>,
 }
 
-fn display_label(off: bool, language: i32) -> &'static str {
-    match (language == 1, off) {
-        (true, true) => "Ekranı aç",
-        (true, false) => "Ekranı kapat",
-        (false, true) => "Turn on display",
-        (false, false) => "Turn off display",
-    }
+fn display_label(off: bool) -> &'static str {
+    if off { tr("Turn on display") } else { tr("Turn off display") }
 }
 
 fn mono_icon(light_taskbar: bool) -> Option<Icon> {
@@ -208,12 +203,11 @@ fn mono_icon(light_taskbar: bool) -> Option<Icon> {
 }
 
 impl Tray {
-    pub fn new(stats_on: bool, display_off: bool, language: i32) -> Result<Tray, String> {
-        let turkish = language == 1;
-        let open = MenuItem::new(if turkish { "AIO Cooler Screen'i aç" } else { "Open AIO Cooler Screen" }, true, None);
-        let stats = CheckMenuItem::new(if turkish { "Canlı verileri göster" } else { "Show live stats" }, true, stats_on, None);
-        let display = MenuItem::new(display_label(display_off, language), true, None);
-        let quit = MenuItem::new(if turkish { "Çıkış" } else { "Quit" }, true, None);
+    pub fn new(stats_on: bool, display_off: bool) -> Result<Tray, String> {
+        let open = MenuItem::new(tr("Open AIO Cooler Screen"), true, None);
+        let stats = CheckMenuItem::new(tr("Show live stats"), true, stats_on, None);
+        let display = MenuItem::new(display_label(display_off), true, None);
+        let quit = MenuItem::new(tr("Quit"), true, None);
         let menu = Menu::new();
         menu.append_items(&[&open, &stats, &display, &PredefinedMenuItem::separator(), &quit]).map_err(|e| e.to_string())?;
         let light = taskbar_is_light();
@@ -225,7 +219,7 @@ impl Tray {
             builder = builder.with_icon(icon);
         }
         let icon = builder.build().map_err(|e| e.to_string())?;
-        Ok(Tray { icon, light, open, stats, display, quit, language: Cell::new(language), display_off: Cell::new(display_off) })
+        Ok(Tray { icon, light, open, stats, display, quit, display_off: Cell::new(display_off) })
     }
 
     /// Follow the Windows theme so the monochrome icon stays visible.
@@ -246,19 +240,17 @@ impl Tray {
     }
 
     pub fn set_display_off(&self, off: bool) {
-        self.display.set_text(display_label(off, self.language.get()));
+        self.display.set_text(display_label(off));
         self.display_off.set(off);
     }
 
     /// Update the current menu items when the user switches application language.
     /// IDs and checked state stay unchanged; only visible text is localized.
-    pub fn set_language(&self, language: i32) {
-        let turkish = language == 1;
-        self.open.set_text(if turkish { "AIO Cooler Screen'i aç" } else { "Open AIO Cooler Screen" });
-        self.stats.set_text(if turkish { "Canlı verileri göster" } else { "Show live stats" });
-        self.display.set_text(display_label(self.display_off.get(), language));
-        self.quit.set_text(if turkish { "Çıkış" } else { "Quit" });
-        self.language.set(language);
+    pub fn refresh_language(&self) {
+        self.open.set_text(tr("Open AIO Cooler Screen"));
+        self.stats.set_text(tr("Show live stats"));
+        self.display.set_text(display_label(self.display_off.get()));
+        self.quit.set_text(tr("Quit"));
     }
 
     /// Pending clicks and menu choices.
