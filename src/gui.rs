@@ -97,7 +97,11 @@ impl State {
 }
 
 /// Run the GUI. With `start_in_tray` (used by the sign-in entry) only the tray icon appears.
-pub fn run(start_in_tray: bool) -> Result<(), String> {
+/// `restart_after` is the process id of the copy this one replaces.
+pub fn run(start_in_tray: bool, restart_after: Option<u32>) -> Result<(), String> {
+    if let Some(pid) = restart_after {
+        desktop::wait_for_exit(pid, 10_000);
+    }
     // One copy at a time: a second launch just brings the running one forward.
     let _instance = match desktop::claim_instance() {
         Instance::First(handle) => handle,
@@ -353,6 +357,7 @@ fn init_ui(ui: &AppWindow, state: &State) {
     i18n::set_language(state.prefs.language);
     ui.set_preview_shape(state.prefs.preview_shape.clamp(0, 1));
     ui.set_hardware_acceleration(state.prefs.hardware_acceleration);
+    ui.set_hardware_acceleration_at_start(state.prefs.hardware_acceleration);
     ui.set_display_off(state.cfg.display_off);
     let kinds: Vec<SharedString> = WidgetKind::ALL.iter().map(|k| {
         let name = localized_widget_kind(*k); name.into()
@@ -984,9 +989,21 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         let Some(ui) = weak.upgrade() else { return };
         let mut s = st.borrow_mut();
         s.prefs.hardware_acceleration = on;
-        match s.prefs.save() {
-            Ok(()) => show_message(&ui, true, tr("Restart the app to apply the change.")),
-            Err(e) => show_message(&ui, false, format!("{}: {e}", tr("Could not save preference"))),
+        if let Err(e) = s.prefs.save() {
+            show_message(&ui, false, format!("{}: {e}", tr("Could not save preference")));
+        }
+    });
+
+    let weak = ui.as_weak();
+    ui.on_restart_app(move || {
+        let Some(ui) = weak.upgrade() else { return };
+        let started = std::env::current_exe()
+            .and_then(|exe| Command::new(exe).arg("--after").arg(std::process::id().to_string()).spawn());
+        match started {
+            Ok(_) => {
+                let _ = slint::quit_event_loop();
+            }
+            Err(e) => show_message(&ui, false, format!("{}: {e}", tr("Could not restart the app"))),
         }
     });
 

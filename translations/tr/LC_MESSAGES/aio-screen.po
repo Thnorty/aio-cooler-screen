@@ -794,9 +794,17 @@ msgctxt "AppWindow"
 msgid "Draws this window with the graphics card. Turn it off if the window flickers or stays blank. Takes effect after you restart the app."
 msgstr "Bu pencereyi ekran kartıyla çizer. Pencere titriyor veya boş kalıyorsa kapat. Uygulamayı yeniden başlattıktan sonra geçerli olur."
 
-msgctxt "Rust"
+msgctxt "AppWindow"
 msgid "Restart the app to apply the change."
 msgstr "Değişikliği uygulamak için uygulamayı yeniden başlat."
+
+msgctxt "AppWindow"
+msgid "Restart now"
+msgstr "Şimdi yeniden başlat"
+
+msgctxt "Rust"
+msgid "Could not restart the app"
+msgstr "Uygulama yeniden başlatılamadı"
 
 # Text drawn on the cooler screen.
 

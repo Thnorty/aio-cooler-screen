@@ -393,6 +393,8 @@ export component AppWindow inherits Window {
     in property <bool> autostart-busy;
     in-out property <bool> show-tray;
     in-out property <bool> hardware-acceleration: true;
+    // What the window was started with; the switch only applies after a restart.
+    in property <bool> hardware-acceleration-at-start: true;
     in-out property <bool> login-tray;
     in property <bool> display-off;
 
@@ -422,6 +424,7 @@ export component AppWindow inherits Window {
     callback autostart-toggled(bool);
     callback show-tray-toggled(bool);
     callback hardware-acceleration-toggled(bool);
+    callback restart-app();
     callback login-toggled(bool);
     callback toggle-display();
 
@@ -1370,6 +1373,21 @@ export component AppWindow inherits Window {
                             Switch {
                                 checked <=> root.hardware-acceleration;
                                 toggled => { root.hardware-acceleration-toggled(self.checked); }
+                            }
+                        }
+                        if root.hardware-acceleration != root.hardware-acceleration-at-start: HorizontalLayout {
+                            spacing: 12px;
+                            alignment: end;
+                            Text {
+                                text: @tr("Restart the app to apply the change.");
+                                color: Palette.foreground;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                            Button {
+                                text: @tr("Restart now");
+                                primary: true;
+                                clicked => { root.restart-app(); }
                             }
                         }
                     }

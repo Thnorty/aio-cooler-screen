@@ -11,7 +11,10 @@ use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EX
 use windows_sys::Win32::System::Registry::{
     RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW, HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_DWORD, RRF_RT_REG_SZ,
 };
-use windows_sys::Win32::System::Threading::{CreateEventW, CreateMutexW, OpenEventW, SetEvent, WaitForSingleObject, EVENT_MODIFY_STATE, INFINITE};
+use windows_sys::Win32::System::Threading::{
+    CreateEventW, CreateMutexW, OpenEventW, OpenProcess, SetEvent, WaitForSingleObject, EVENT_MODIFY_STATE, INFINITE,
+    PROCESS_SYNCHRONIZE,
+};
 
 use crate::i18n::tr;
 use crate::icon;
@@ -158,6 +161,19 @@ pub fn claim_instance() -> Instance {
             return Instance::AlreadyRunning;
         }
         Instance::First(mutex)
+    }
+}
+
+/// Wait up to `timeout_ms` for process `pid` to exit. A restarted app waits for the copy it
+/// replaces, so that copy's single-instance mutex is gone before this one claims it.
+pub fn wait_for_exit(pid: u32, timeout_ms: u32) {
+    // SAFETY: the handle is checked before use and closed afterwards.
+    unsafe {
+        let process = OpenProcess(PROCESS_SYNCHRONIZE, 0, pid);
+        if !process.is_null() {
+            WaitForSingleObject(process, timeout_ms);
+            CloseHandle(process);
+        }
     }
 }
 

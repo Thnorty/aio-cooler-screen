@@ -73,6 +73,10 @@ fn main() -> ExitCode {
             }
             report(r, None)
         }
-        _ => report(gui::run(flag("--tray")), None),
+        _ => {
+            // `--after <pid>`: started by "Restart now"; wait for the old copy to exit first.
+            let after = args.iter().position(|a| a == "--after").and_then(|i| args.get(i + 1)?.parse().ok());
+            report(gui::run(flag("--tray"), after), None)
+        }
     }
 }

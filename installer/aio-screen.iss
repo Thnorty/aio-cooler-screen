@@ -91,6 +91,11 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchApp}"; Flags: nowait postin
 [UninstallRun]
 Filename: "{app}\{#AppExe}"; Parameters: "uninstall --keep-files"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveService"
 
+; Fonts that earlier versions installed but this one no longer uses.
+[InstallDelete]
+Type: files; Name: "{app}\fonts\Orbitron-*.ttf"
+Type: files; Name: "{app}\fonts\licenses\Orbitron-OFL.txt"
+
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\ffmpeg"
 
