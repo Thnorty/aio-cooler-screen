@@ -71,7 +71,7 @@ fn fonts(choice: FontChoice) -> Option<&'static Fonts> {
                 FontChoice::GoogleSansFlex => (vec![(bundled_font("GoogleSansFlex-Bold.ttf"), Some(700.0))], vec![(bundled_font("GoogleSansFlex-Regular.ttf"), Some(400.0))]),
                 FontChoice::Inter => (vec![(bundled_font("Inter-Bold.ttf"), Some(700.0))], vec![(bundled_font("Inter-Regular.ttf"), Some(400.0))]),
                 FontChoice::Rajdhani => (vec![(bundled_font("Rajdhani-Bold.ttf"), Some(700.0))], vec![(bundled_font("Rajdhani-Regular.ttf"), Some(400.0))]),
-                FontChoice::Orbitron => (vec![(bundled_font("Orbitron-Bold.ttf"), Some(700.0))], vec![(bundled_font("Orbitron-Regular.ttf"), Some(400.0))]),
+                FontChoice::Oxanium => (vec![(bundled_font("Oxanium-Bold.ttf"), Some(700.0))], vec![(bundled_font("Oxanium-Regular.ttf"), Some(400.0))]),
                 FontChoice::JetBrainsMono => (vec![(bundled_font("JetBrainsMono-Bold.ttf"), Some(700.0))], vec![(bundled_font("JetBrainsMono-Regular.ttf"), Some(400.0))]),
                 FontChoice::RobotoCondensed => (vec![(bundled_font("RobotoCondensed-Bold.ttf"), Some(700.0))], vec![(bundled_font("RobotoCondensed-Regular.ttf"), Some(400.0))]),
                 FontChoice::Oswald => (vec![(bundled_font("Oswald-Bold.ttf"), Some(700.0))], vec![(bundled_font("Oswald-Regular.ttf"), Some(400.0))]),
@@ -86,7 +86,7 @@ fn fonts(choice: FontChoice) -> Option<&'static Fonts> {
         .as_ref()
 }
 
-/// Segoe UI Semibold, for letters the chosen font lacks (Orbitron has no Ğ, İ or Ş).
+/// Segoe UI Semibold, for letters the chosen font lacks.
 fn fallback_font() -> Option<&'static FontVec> {
     static FALLBACK: OnceLock<Option<FontVec>> = OnceLock::new();
     FALLBACK.get_or_init(|| load_font(r"C:\Windows\Fonts\seguisb.ttf", None)).as_ref()
@@ -520,16 +520,26 @@ fn clock(pm: &mut Pixmap, o: &ClockOptions, v: &StatValues, now: DateTime<Local>
     };
     if let Some((a, b)) = pair {
         let y = if o.date { 366.0 } else { 330.0 };
-        for (stat, cx) in [(a, CENTER - 72.0), (b, CENTER + 72.0)] {
-            let value = v.get(stat);
-            let text = format!("{} {}", stat.label(), format_value(stat, value));
-            // Sit the dot just left of the text, which is wider in some fonts (Orbitron).
-            let size = 32.0 * look.text_scale.clamp(60, 140) as f32 / 100.0;
-            let left = cx + 4.0 - text_width(&fonts.regular, size, &text) / 2.0;
-            if let Some(dot) = PathBuilder::from_circle(left - 14.0, y, 6.0) {
+        // One centred row of "• CPU 58°   • GPU 47°", measured so wide fonts keep their spacing.
+        const DOT: f32 = 22.0; // dot plus the gap before its text
+        const SPACE: f32 = 36.0; // between the two stats
+        let size = 32.0 * look.text_scale.clamp(60, 140) as f32 / 100.0;
+        let items: Vec<(Stat, Option<f64>, String, f32)> = [a, b]
+            .into_iter()
+            .map(|stat| {
+                let value = v.get(stat);
+                let text = format!("{} {}", stat.label(), format_value(stat, value));
+                let width = text_width(&fonts.regular, size, &text);
+                (stat, value, text, width)
+            })
+            .collect();
+        let mut x = CENTER - (items.iter().map(|i| DOT + i.3).sum::<f32>() + SPACE) / 2.0;
+        for (stat, value, text, width) in items {
+            if let Some(dot) = PathBuilder::from_circle(x + 6.0, y, 6.0) {
                 pm.fill_path(&dot, &paint(stat_color(look, stat, value), 255), FillRule::Winding, Transform::identity(), None);
             }
-            t.add(false, 32.0, cx + 4.0, y + 12.0, text, rgba(look.text, 230));
+            t.add(false, 32.0, x + DOT + width / 2.0, y + 12.0, text, rgba(look.text, 230));
+            x += DOT + width + SPACE;
         }
     }
 }

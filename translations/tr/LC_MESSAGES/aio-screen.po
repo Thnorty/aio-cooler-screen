@@ -435,24 +435,16 @@ msgid "Sources"
 msgstr "Kaynaklar"
 
 msgctxt "AppWindow"
-msgid "CPU temperature and load are read directly. Internal LHM provides additional hardware sensors; HWiNFO and external LibreHardwareMonitor remain optional."
-msgstr "CPU sıcaklığı ve kullanımı doğrudan okunur. Dahili LHM ek donanım sensörlerini sağlar; HWiNFO ve harici LibreHardwareMonitor isteğe bağlıdır."
+msgid "CPU temperature and load are read directly. Internal LHM provides additional hardware sensors; HWiNFO remains optional."
+msgstr "CPU sıcaklığı ve kullanımı doğrudan okunur. Dahili LHM ek donanım sensörlerini sağlar; HWiNFO isteğe bağlıdır."
 
 msgctxt "AppWindow"
-msgid "Internal LHM: bundled with the installer; no separate LibreHardwareMonitor app or web server needed. Some hardware may be unsupported.\nOptional alternatives:\nHWiNFO: open Settings, enable \"Shared Memory Support\" and keep HWiNFO running. The free version turns this off after 12 hours.\nExternal LibreHardwareMonitor: run as administrator and enable Options > Remote Web Server > Run. Configure the port below."
-msgstr "Dahili LHM: Kurulum paketiyle birlikte gelir; ayrı LibreHardwareMonitor uygulaması veya web sunucusu gerekmez. Bazı donanımlar desteklenmeyebilir.\nİsteğe bağlı alternatifler:\nHWiNFO: Ayarlardan \"Shared Memory Support\" seçeneğini açıp HWiNFO uygulamasını çalışır bırak. Ücretsiz sürümde bu özellik 12 saat sonra kapanır.\nHarici LibreHardwareMonitor: yönetici olarak aç ve Options > Remote Web Server > Run seçeneğini etkinleştir. Aşağıdaki port ayarını kullan."
+msgid "Internal LHM: bundled with the installer; no separate LibreHardwareMonitor app needed. Some hardware may be unsupported.\nOptional alternative:\nHWiNFO: open Settings, enable \"Shared Memory Support\" and keep HWiNFO running. The free version turns this off after 12 hours."
+msgstr "Dahili LHM: Kurulum paketiyle birlikte gelir; ayrı LibreHardwareMonitor uygulaması gerekmez. Bazı donanımlar desteklenmeyebilir.\nİsteğe bağlı alternatif:\nHWiNFO: Ayarlardan \"Shared Memory Support\" seçeneğini açıp HWiNFO uygulamasını çalışır bırak. Ücretsiz sürümde bu özellik 12 saat sonra kapanır."
 
 msgctxt "AppWindow"
 msgid "Get HWiNFO"
 msgstr "HWiNFO indir"
-
-msgctxt "AppWindow"
-msgid "Get LibreHardwareMonitor"
-msgstr "LibreHardwareMonitor indir"
-
-msgctxt "AppWindow"
-msgid "External LibreHardwareMonitor web server port"
-msgstr "Harici LibreHardwareMonitor web sunucusu portu"
 
 msgctxt "AppWindow"
 msgid "Language / Dil"
@@ -543,8 +535,8 @@ msgid "About"
 msgstr "Hakkında"
 
 msgctxt "AppWindow"
-msgid "Backgrounds and live stats for the Monster AIO Cooler LCD. CPU temperatures are read through the open-source PawnIO driver, CPU load from Windows and NVIDIA GPUs through the driver's NVML; Internal LHM reads additional sensors without a separate web server; HWiNFO and external LibreHardwareMonitor remain supported alternatives. Videos are converted with ffmpeg. See THIRD-PARTY-NOTICES.md in the install folder."
-msgstr "Monster AIO Cooler LCD için arka planlar ve canlı istatistikler. CPU sıcaklığı açık kaynak PawnIO sürücüsünden, CPU kullanımı Windows'tan ve NVIDIA GPU değerleri NVML üzerinden okunur. Dahili LHM ek sensörleri ayrı web sunucusu olmadan okur; HWiNFO ve harici LibreHardwareMonitor alternatif olarak desteklenir. Videolar ffmpeg ile dönüştürülür. Ayrıntılar kurulum klasöründeki THIRD-PARTY-NOTICES.md dosyasında."
+msgid "Backgrounds and live stats for the Monster AIO Cooler LCD. CPU temperatures are read through the open-source PawnIO driver, CPU load from Windows and NVIDIA GPUs through the driver's NVML; Internal LHM reads additional sensors through LibreHardwareMonitorLib; HWiNFO remains a supported alternative. Videos are converted with ffmpeg. See THIRD-PARTY-NOTICES.md in the install folder."
+msgstr "Monster AIO Cooler LCD için arka planlar ve canlı istatistikler. CPU sıcaklığı açık kaynak PawnIO sürücüsünden, CPU kullanımı Windows'tan ve NVIDIA GPU değerleri NVML üzerinden okunur. Dahili LHM ek sensörleri LibreHardwareMonitorLib ile okur; HWiNFO alternatif olarak desteklenir. Videolar ffmpeg ile dönüştürülür. Ayrıntılar kurulum klasöründeki THIRD-PARTY-NOTICES.md dosyasında."
 
 msgctxt "AppWindow"
 msgid "Edit {}"
@@ -781,6 +773,30 @@ msgstr "Çıkış"
 msgctxt "Rust"
 msgid " (built-in)"
 msgstr " (yerleşik)"
+
+msgctxt "Rust"
+msgid "Internal LHM"
+msgstr "Dahili LHM"
+
+msgctxt "Rust"
+msgid "Downloading… (approve the admin prompt)"
+msgstr "İndiriliyor… (yönetici iznini onayla)"
+
+msgctxt "AppWindow"
+msgid "Graphics"
+msgstr "Grafik"
+
+msgctxt "AppWindow"
+msgid "Hardware acceleration"
+msgstr "Donanım hızlandırma"
+
+msgctxt "AppWindow"
+msgid "Draws this window with the graphics card. Turn it off if the window flickers or stays blank. Takes effect after you restart the app."
+msgstr "Bu pencereyi ekran kartıyla çizer. Pencere titriyor veya boş kalıyorsa kapat. Uygulamayı yeniden başlattıktan sonra geçerli olur."
+
+msgctxt "Rust"
+msgid "Restart the app to apply the change."
+msgstr "Değişikliği uygulamak için uygulamayı yeniden başlat."
 
 # Text drawn on the cooler screen.
 

@@ -1,6 +1,6 @@
 # Built-in hardware sensor helper (SensorProbe)
 
-`SensorProbe` is the **integrated .NET 8 / LibreHardwareMonitorLib helper** used by AIO Cooler Screen. It is launched and monitored by the AIO Windows service; an external LibreHardwareMonitor GUI or HTTP server is **not** required. The existing external LibreHardwareMonitor and HWiNFO sources remain optional alternatives.
+`SensorProbe` is the **integrated .NET 8 / LibreHardwareMonitorLib helper** used by AIO Cooler Screen. It is launched and monitored by the AIO Windows service; a separate LibreHardwareMonitor app is **not** required. HWiNFO remains an optional alternative.
 
 ## Build
 

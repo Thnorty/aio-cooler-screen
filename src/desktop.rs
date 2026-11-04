@@ -38,11 +38,14 @@ pub struct Prefs {
     pub language: i32,
     /// 0 = square (default), 1 = round preview. Does not change LCD output.
     pub preview_shape: i32,
+    /// Draw the window with the GPU (Skia on Direct3D); off uses Skia's CPU renderer.
+    /// Read at startup only.
+    pub hardware_acceleration: bool,
 }
 
 impl Default for Prefs {
     fn default() -> Self {
-        Prefs { show_tray: true, language: 0, preview_shape: 0 }
+        Prefs { show_tray: true, language: 0, preview_shape: 0, hardware_acceleration: true }
     }
 }
 

@@ -5,7 +5,7 @@ $dest = Join-Path $PSScriptRoot '..\assets\fonts'
 New-Item -ItemType Directory -Force $dest, "$dest\licenses" | Out-Null
 $families = [ordered]@{
   'GoogleSans'='googlesans'; 'GoogleSansFlex'='googlesansflex';
-  'Inter'='inter'; 'Rajdhani'='rajdhani'; 'Orbitron'='orbitron';
+  'Inter'='inter'; 'Rajdhani'='rajdhani'; 'Oxanium'='oxanium';
   'JetBrainsMono'='jetbrainsmono'; 'RobotoCondensed'='robotocondensed'; 'Oswald'='oswald'
 }
 $headers = @{ 'User-Agent'='AIO-Cooler-Screen-Font-Build'; 'Accept'='application/vnd.github+json' }

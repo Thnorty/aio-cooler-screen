@@ -24,8 +24,7 @@ official app.
 - **Live sensors out of the box:** CPU temperature (AMD Ryzen and Intel Core) and load, NVIDIA
   GPU temperature and load, and, through the bundled LibreHardwareMonitor, CPU clocks, voltages,
   motherboard temperatures and fan/pump speeds, with nothing extra to install. Sensors are found
-  automatically; pick any of them for each stat or widget. HWiNFO or a separate
-  LibreHardwareMonitor can add more.
+  automatically; pick any of them for each stat or widget. HWiNFO can add more.
 - **Starts with Windows:** a background service drives the screen from boot, keeps it awake
   and wakes it again after sleep, with no admin prompts. You can turn this off.
 - **Tray icon:** a monochrome icon that follows your Windows theme. Its menu has Open,
@@ -56,7 +55,6 @@ Requires Windows 10/11 (64-bit).
 | NVIDIA GPUs | Temperature and load through NVML from the NVIDIA driver. | None. |
 | Internal LibreHardwareMonitor | Whatever [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) finds: CPU clocks and voltages, motherboard sensors, fan and pump speeds, more GPU and memory readings. | None. The installer includes the `SensorProbe` helper, which the service runs. |
 | [HWiNFO](https://www.hwinfo.com/download/) (optional) | Everything HWiNFO sees, e.g. AMD/Intel GPUs, motherboard and drives. | Settings → enable **Shared Memory Support** and keep HWiNFO running. The free version switches this off after 12 hours. |
-| [External LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases) (optional) | Everything the LibreHardwareMonitor app sees. | Run as administrator, then **Options → Remote Web Server → Run**. The default port is 8085; you can change it on the Sensors page. |
 
 Reading CPU temperatures needs a kernel driver. PawnIO is the one LibreHardwareMonitor and
 FanControl use; it works with Memory Integrity enabled. The **Sensors** page lets you choose
@@ -123,9 +121,7 @@ requested by the user or the person installing or operating it.
 - **ffmpeg download:** only when you tick it in the installer or click it in the app. It
   downloads the build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) and sends nothing
   else.
-- **External LibreHardwareMonitor:** if you turn it on, the app reads sensors from its web server
-  on your own PC (`127.0.0.1`). Nothing leaves the computer. The bundled sensor helper doesn't use
-  the network at all.
+- **Sensors:** all readings, including the bundled LibreHardwareMonitor helper's, stay on your PC.
 
 There's no telemetry, no update check and no account.
 

@@ -378,7 +378,6 @@ export component AppWindow inherits Window {
     // Sensors page
     in property <[StatRow]> stat-rows;
     in property <string> sensors-state;
-    in-out property <string> lhm-port;
 
     // Settings page
     in property <string> service-state;
@@ -393,6 +392,7 @@ export component AppWindow inherits Window {
     in-out property <bool> autostart;
     in property <bool> autostart-busy;
     in-out property <bool> show-tray;
+    in-out property <bool> hardware-acceleration: true;
     in-out property <bool> login-tray;
     in property <bool> display-off;
 
@@ -418,10 +418,10 @@ export component AppWindow inherits Window {
     callback open-data-folder();
     callback open-log();
     callback download-ffmpeg();
-    callback lhm-port-edited(string);
     callback open-url(string);
     callback autostart-toggled(bool);
     callback show-tray-toggled(bool);
+    callback hardware-acceleration-toggled(bool);
     callback login-toggled(bool);
     callback toggle-display();
 
@@ -1040,7 +1040,7 @@ export component AppWindow inherits Window {
                                 label: @tr("Font");
                                 ComboBox {
                                     width: 200px;
-                                    model: ["Segoe UI", "Bahnschrift", "Arial", "Consolas", "Google Sans", "Google Sans Flex", "Inter", "Rajdhani", "Orbitron", "JetBrains Mono", "Roboto Condensed", "Oswald"];
+                                    model: ["Segoe UI", "Bahnschrift", "Arial", "Consolas", "Google Sans", "Google Sans Flex", "Inter", "Rajdhani", "Oxanium", "JetBrains Mono", "Roboto Condensed", "Oswald"];
                                     current-index <=> root.font-index;
                                     selected => { root.settings-changed(); }
                                 }
@@ -1232,7 +1232,7 @@ export component AppWindow inherits Window {
                     }
                     Card {
                         title: @tr("Sources");
-                        subtitle: @tr("CPU temperature and load are read directly. Internal LHM provides additional hardware sensors; HWiNFO and external LibreHardwareMonitor remain optional.");
+                        subtitle: @tr("CPU temperature and load are read directly. Internal LHM provides additional hardware sensors; HWiNFO remains optional.");
                         Text {
                             text: root.sensors-state;
                             color: Palette.foreground;
@@ -1241,7 +1241,7 @@ export component AppWindow inherits Window {
                         }
                         Divider { }
                         Text {
-                            text: @tr("Internal LHM: bundled with the installer; no separate LibreHardwareMonitor app or web server needed. Some hardware may be unsupported.\nOptional alternatives:\nHWiNFO: open Settings, enable \"Shared Memory Support\" and keep HWiNFO running. The free version turns this off after 12 hours.\nExternal LibreHardwareMonitor: run as administrator and enable Options > Remote Web Server > Run. Configure the port below.");
+                            text: @tr("Internal LHM: bundled with the installer; no separate LibreHardwareMonitor app needed. Some hardware may be unsupported.\nOptional alternative:\nHWiNFO: open Settings, enable \"Shared Memory Support\" and keep HWiNFO running. The free version turns this off after 12 hours.");
                             color: Palette.foreground;
                             opacity: 0.75;
                             font-size: 12px;
@@ -1253,19 +1253,6 @@ export component AppWindow inherits Window {
                             Button {
                                 text: @tr("Get HWiNFO");
                                 clicked => { root.open-url("https://www.hwinfo.com/download/"); }
-                            }
-                            Button {
-                                text: @tr("Get LibreHardwareMonitor");
-                                clicked => { root.open-url("https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases"); }
-                            }
-                        }
-                        SettingRow {
-                            label: @tr("External LibreHardwareMonitor web server port");
-                            LineEdit {
-                                width: 100px;
-                                text <=> root.lhm-port;
-                                input-type: number;
-                                edited(t) => { root.lhm-port-edited(t); }
                             }
                         }
                     }
@@ -1376,6 +1363,17 @@ export component AppWindow inherits Window {
                         }
                     }
                     Card {
+                        title: @tr("Graphics");
+                        SettingRow {
+                            label: @tr("Hardware acceleration");
+                            hint: @tr("Draws this window with the graphics card. Turn it off if the window flickers or stays blank. Takes effect after you restart the app.");
+                            Switch {
+                                checked <=> root.hardware-acceleration;
+                                toggled => { root.hardware-acceleration-toggled(self.checked); }
+                            }
+                        }
+                    }
+                    Card {
                         title: @tr("Video support");
                         subtitle: @tr("ffmpeg is needed only for video and GIF backgrounds. It's kept private to this app and doesn't change PATH.");
                         SettingRow {
@@ -1408,7 +1406,7 @@ export component AppWindow inherits Window {
                             wrap: word-wrap;
                             color: Palette.foreground;
                             font-size: 13px;
-                            text: @tr("Backgrounds and live stats for the Monster AIO Cooler LCD. CPU temperatures are read through the open-source PawnIO driver, CPU load from Windows and NVIDIA GPUs through the driver's NVML; Internal LHM reads additional sensors without a separate web server; HWiNFO and external LibreHardwareMonitor remain supported alternatives. Videos are converted with ffmpeg. See THIRD-PARTY-NOTICES.md in the install folder.");
+                            text: @tr("Backgrounds and live stats for the Monster AIO Cooler LCD. CPU temperatures are read through the open-source PawnIO driver, CPU load from Windows and NVIDIA GPUs through the driver's NVML; Internal LHM reads additional sensors through LibreHardwareMonitorLib; HWiNFO remains a supported alternative. Videos are converted with ffmpeg. See THIRD-PARTY-NOTICES.md in the install folder.");
                         }
                         HorizontalLayout {
                             alignment: start;

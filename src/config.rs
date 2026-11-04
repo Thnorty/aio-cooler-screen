@@ -238,14 +238,16 @@ pub enum FontChoice {
     GoogleSansFlex,
     Inter,
     Rajdhani,
-    Orbitron,
+    /// Replaced Orbitron, which has no Ğ, İ or Ş; saved designs that used it switch over.
+    #[serde(alias = "Orbitron")]
+    Oxanium,
     JetBrainsMono,
     RobotoCondensed,
     Oswald,
 }
 
 impl FontChoice {
-    pub const ALL: [FontChoice; 12] = [FontChoice::SegoeUi, FontChoice::Bahnschrift, FontChoice::Arial, FontChoice::Consolas, FontChoice::GoogleSans, FontChoice::GoogleSansFlex, FontChoice::Inter, FontChoice::Rajdhani, FontChoice::Orbitron, FontChoice::JetBrainsMono, FontChoice::RobotoCondensed, FontChoice::Oswald];
+    pub const ALL: [FontChoice; 12] = [FontChoice::SegoeUi, FontChoice::Bahnschrift, FontChoice::Arial, FontChoice::Consolas, FontChoice::GoogleSans, FontChoice::GoogleSansFlex, FontChoice::Inter, FontChoice::Rajdhani, FontChoice::Oxanium, FontChoice::JetBrainsMono, FontChoice::RobotoCondensed, FontChoice::Oswald];
 }
 
 /// Colours and text styling; every design keeps its own.
@@ -478,18 +480,9 @@ impl StatsConfig {
     }
 }
 
-pub const DEFAULT_LHM_PORT: u16 = 8085;
-
-fn default_lhm_port() -> u16 {
-    DEFAULT_LHM_PORT
-}
-
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
-    /// LibreHardwareMonitor web server port.
-    #[serde(default = "default_lhm_port")]
-    pub lhm_port: u16,
     /// File name inside the data dir of the prepared media (480x480 PNG or MP4).
     pub media_file: Option<String>,
     /// Original file name the user picked, for display.
@@ -503,14 +496,6 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn effective_lhm_port(&self) -> u16 {
-        if self.lhm_port == 0 {
-            DEFAULT_LHM_PORT
-        } else {
-            self.lhm_port
-        }
-    }
-
     pub fn load() -> Config {
         let Ok(text) = std::fs::read_to_string(config_path()) else { return Config::default() };
         serde_json::from_str(&text)
@@ -534,7 +519,6 @@ fn migrate_v1(v: serde_json::Value) -> Config {
     use serde_json::from_value as from;
     let get = |o: &serde_json::Value, k: &str| o.get(k).cloned().unwrap_or(serde_json::Value::Null);
     let mut cfg = Config {
-        lhm_port: from(get(&v, "lhm_port")).unwrap_or(DEFAULT_LHM_PORT),
         media_file: from(get(&v, "media_file")).unwrap_or_default(),
         media_source: from(get(&v, "media_source")).unwrap_or_default(),
         media_is_video: from(get(&v, "media_is_video")).unwrap_or_default(),
@@ -590,6 +574,12 @@ mod tests {
     use super::*;
 
     #[test]
+    fn orbitron_designs_load_as_oxanium() {
+        assert_eq!(serde_json::from_str::<FontChoice>("\"Orbitron\"").unwrap(), FontChoice::Oxanium);
+        assert_eq!(serde_json::to_string(&FontChoice::Oxanium).unwrap(), "\"Oxanium\"");
+    }
+
+    #[test]
     fn migrates_v1_config_keeping_background_and_settings() {
         let v1 = r#"{"media_file":"media-1.png","media_source":null,"media_is_video":false,"media_version":9,
             "stats":{"enabled":true,"design":"Tiles","show":["CpuTemp","GpuTemp"],"position":"Bottom",
@@ -606,7 +596,6 @@ mod tests {
         assert!(!cfg.stats.gauges.look.temp_colors);
         assert_eq!(cfg.stats.big_stat.stat, Stat::GpuLoad);
         assert!(!cfg.stats.clock.h24);
-        assert_eq!(cfg.effective_lhm_port(), DEFAULT_LHM_PORT);
     }
 }
 

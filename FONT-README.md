@@ -1,6 +1,6 @@
 # Additional LCD fonts
 
-Eight additional font families are available: Google Sans, Google Sans Flex, Inter, Rajdhani, Orbitron, JetBrains Mono, Roboto Condensed and Oswald.
+Eight additional font families are available: Google Sans, Google Sans Flex, Inter, Rajdhani, Oxanium, JetBrains Mono, Roboto Condensed and Oswald.
 
 The original four font IDs and saved names are retained to preserve existing designs. During the Windows installer build, `tools/fetch-fonts.ps1` downloads font files and individual SIL OFL licence files from the official `google/fonts` repository. The full installer includes them, and the LCD renderer loads them from the application's `fonts/` folder. The installer does not install fonts system-wide or download them on the end user's computer.
 

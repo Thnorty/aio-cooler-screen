@@ -2,7 +2,7 @@
 //! - built in: CPU temperature through PawnIO and CPU load from Windows (see cpu.rs),
 //! - NVIDIA GPUs directly through NVML (nvml.dll, installed with the NVIDIA driver),
 //! - optionally HWiNFO with "Shared Memory Support" enabled (Global\HWiNFO_SENS_SM2),
-//! - optionally LibreHardwareMonitor's web server (http://127.0.0.1:<port>/data.json).
+//! - the bundled LibreHardwareMonitorLib helper (SensorProbe.exe, see `InternalProbe`).
 
 use std::ffi::c_char;
 use std::io::{BufRead, BufReader};
@@ -161,78 +161,6 @@ fn parse_hwinfo(data: &[u8], kinds: &[i32]) -> Result<Vec<Reading>, String> {
         let sensor = sensor_names.get(sensor_idx as usize).cloned().unwrap_or_default();
         out.push(Reading::new("HWiNFO", &sensor, &label, kind, location_from_name(&sensor), value, &units));
     }
-    Ok(out)
-}
-
-// ---------------------------------------------------------------------------------------
-// LibreHardwareMonitor web server
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct LhmNode {
-    #[serde(default)]
-    text: String,
-    #[serde(default)]
-    children: Vec<LhmNode>,
-    #[serde(default)]
-    value: Option<String>,
-    #[serde(default, rename = "Type")]
-    kind: Option<String>,
-    #[serde(default)]
-    sensor_id: Option<String>,
-}
-
-/// "58,3 °C" -> (58.3, "°C")
-fn parse_lhm_value(s: &str) -> Option<(f64, String)> {
-    let s = s.trim();
-    let end = s.find(|c: char| !(c.is_ascii_digit() || c == ',' || c == '.' || c == '-')).unwrap_or(s.len());
-    let value = s[..end].replace(',', ".").parse().ok()?;
-    Some((value, s[end..].trim().to_string()))
-}
-
-fn walk_lhm(node: &LhmNode, depth: usize, hardware: &str, kinds: &[i32], out: &mut Vec<Reading>) {
-    // Depth 0 is the root, 1 the computer, 2 each piece of hardware.
-    let hardware = if depth == 2 { node.text.as_str() } else { hardware };
-    if let (Some(kind), Some(value), Some(id)) = (&node.kind, &node.value, &node.sensor_id) {
-        let kind = match kind.as_str() {
-            "Temperature" => READING_TEMP,
-            "Load" => READING_USAGE,
-            "Voltage" => 2,
-            "Fan" => 3,
-            "Current" => 4,
-            "Power" => 5,
-            "Clock" => 6,
-            "Data" | "SmallData" | "Throughput" | "Control" | "Level" | "Factor" => 8,
-            _ => 0,
-        };
-        if kind != 0 && (kinds.is_empty() || kinds.contains(&kind)) {
-            if let Some((v, units)) = parse_lhm_value(value) {
-                let location = if id.contains("cpu") {
-                    LOC_CPU
-                } else if id.starts_with("/gpu") {
-                    LOC_GPU
-                } else {
-                    LOC_OTHER
-                };
-                out.push(Reading::new("LHM", hardware, &node.text, kind, location, v, &units));
-            }
-        }
-    }
-    for child in &node.children {
-        walk_lhm(child, depth + 1, hardware, kinds, out);
-    }
-}
-
-pub fn read_lhm(agent: &ureq::Agent, port: u16, kinds: &[i32]) -> Result<Vec<Reading>, String> {
-    let root: LhmNode = agent
-        .get(&format!("http://127.0.0.1:{port}/data.json"))
-        .call()
-        .map_err(|_| format!("not running (enable Options > Remote Web Server, port {port})"))?
-        .body_mut()
-        .read_json()
-        .map_err(|e| format!("unexpected data: {e}"))?;
-    let mut out = Vec::new();
-    walk_lhm(&root, 0, "", kinds, &mut out);
     Ok(out)
 }
 
@@ -440,7 +368,6 @@ impl Drop for Nvml {
 // All sources together
 
 pub struct SensorHub {
-    agent: ureq::Agent,
     cpu_temp: Option<CpuTemp>,
     cpu_temp_status: String,
     cpu_load: CpuLoad,
@@ -454,14 +381,9 @@ pub struct SensorHub {
 
 impl Default for SensorHub {
     fn default() -> Self {
-        let agent = ureq::Agent::config_builder()
-            .timeout_global(Some(Duration::from_millis(800)))
-            .build()
-            .into();
         let mut cpu_load = CpuLoad::default();
         cpu_load.read(); // first sample, so the next read already has a delta
         SensorHub {
-            agent,
             cpu_temp: None,
             cpu_temp_status: String::new(),
             cpu_load,
@@ -477,7 +399,7 @@ impl Default for SensorHub {
 
 impl SensorHub {
     /// Poll every source. Returns the readings and a one-line summary per source.
-    pub fn read(&mut self, lhm_port: u16, kinds: &[i32]) -> (Vec<Reading>, String) {
+    pub fn read(&mut self, kinds: &[i32]) -> (Vec<Reading>, String) {
         if (self.nvml.is_none() || self.cpu_temp.is_none()) && Instant::now() >= self.next_driver_try {
             if self.cpu_temp.is_none() {
                 match CpuTemp::load() {
@@ -510,8 +432,8 @@ impl SensorHub {
             readings.push(Reading::new("Built-in", &self.cpu_name, "Total CPU Usage", READING_USAGE, LOC_CPU, load, "%"));
         }
 
-        // Internal readings are an independent source; external LHM, HWiNFO and
-        // built-in sensors remain available and their saved keys are unchanged.
+        // Internal readings are an independent source; HWiNFO and the built-in
+        // sensors remain available and their saved keys are unchanged.
         if self.internal_probe.is_none() && Instant::now() >= self.next_probe_try {
             match InternalProbe::start() {
                 Ok(p) => self.internal_probe = Some(p),
@@ -540,14 +462,12 @@ impl SensorHub {
             }
         }
 
-        for (name, result) in [("HWiNFO", read_hwinfo(kinds)), ("LibreHardwareMonitor", read_lhm(&self.agent, lhm_port, kinds))] {
-            match result {
-                Ok(r) => {
-                    summary.push(format!("{name}: ok ({} readings)", r.len()));
-                    readings.extend(r);
-                }
-                Err(e) => summary.push(format!("{name}: {e}")),
+        match read_hwinfo(kinds) {
+            Ok(r) => {
+                summary.push(format!("HWiNFO: ok ({} readings)", r.len()));
+                readings.extend(r);
             }
+            Err(e) => summary.push(format!("HWiNFO: {e}")),
         }
         match &self.nvml {
             Some(n) => {
@@ -688,22 +608,16 @@ mod tests {
     }
 
     #[test]
-    fn parses_lhm_tree_and_picks_stats() {
-        let json = r#"{"Text":"Sensor","Children":[{"Text":"PC","Children":[
-            {"Text":"AMD Ryzen 7 9700X","Children":[
-                {"Text":"Temperatures","Children":[{"Text":"Core (Tctl/Tdie)","Value":"58,3 °C","Type":"Temperature","SensorId":"/amdcpu/0/temperature/2","Children":[]}]},
-                {"Text":"Load","Children":[{"Text":"CPU Total","Value":"12.5 %","Type":"Load","SensorId":"/amdcpu/0/load/0","Children":[]}]}]},
-            {"Text":"NVIDIA GeForce RTX 5070","Children":[
-                {"Text":"Temperatures","Children":[{"Text":"GPU Core","Value":"47.0 °C","Type":"Temperature","SensorId":"/gpu-nvidia/0/temperature/0","Children":[]}]}]}
-        ]}]}"#;
-        let root: LhmNode = serde_json::from_str(json).unwrap();
-        let mut r = Vec::new();
-        walk_lhm(&root, 0, "", &[], &mut r);
-        assert_eq!(r.len(), 3);
+    fn picks_stats_from_librehardwaremonitor_names() {
+        let r = vec![
+            Reading::new("Internal LHM", "AMD Ryzen 7 9700X", "Core (Tctl/Tdie)", READING_TEMP, LOC_CPU, 58.3, "°C"),
+            Reading::new("Internal LHM", "AMD Ryzen 7 9700X", "CPU Total", READING_USAGE, LOC_CPU, 12.5, "%"),
+            Reading::new("Internal LHM", "NVIDIA GeForce RTX 5070", "GPU Core", READING_TEMP, LOC_GPU, 47.0, "°C"),
+        ];
         assert_eq!(Stat::CpuTemp.auto_pick(&r).unwrap().value, 58.3);
         assert_eq!(Stat::CpuLoad.auto_pick(&r).unwrap().value, 12.5);
         let gpu = Stat::GpuTemp.auto_pick(&r).unwrap();
-        assert_eq!(gpu.sensor, "LHM · NVIDIA GeForce RTX 5070");
+        assert_eq!(gpu.sensor, "Internal LHM · NVIDIA GeForce RTX 5070");
         assert_eq!(gpu.value, 47.0);
     }
 }

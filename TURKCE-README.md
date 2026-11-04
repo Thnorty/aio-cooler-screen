@@ -10,9 +10,9 @@ Uyumlu **Monster AIO sıvı soğutucuların LCD ekranları** (USB HID `1D6B:0130
 - **Genişletilmiş sensör bilgileri:** Donanımın desteklediği CPU frekansı, Vcore ve diğer voltajlar, anakart sensörleri, sıcaklıklar, fan ve pompa RPM değerleri arasından seçim yapabilme.
 - **Otomatik donanım keşfi:** Sabit anakart modelleri veya fan numaraları kullanılmadan sensörlerin dinamik olarak algılanması; kullanıcının kendi sistemine uygun okumaları seçebilmesi.
 - **Anlaşılır sensör adları:** Sensörler sekmesinde ve tasarım düzenleyicisinde teknik kimlikler yerine donanım ve sensör adlarının gösterilmesi; kayıtlı tasarımlardaki kararlı sensör anahtarlarının korunması.
-- **Mevcut sensör kaynaklarının korunması:** Yerleşik CPU/GPU bilgileri, isteğe bağlı HWiNFO paylaşımlı bellek ve harici LibreHardwareMonitor HTTP desteği kullanılmaya devam eder. Harici LHM portu değiştirilebilir (varsayılan `8085`).
+- **Mevcut sensör kaynaklarının korunması:** Yerleşik CPU/GPU bilgileri, ve isteğe bağlı HWiNFO paylaşımlı bellek desteği kullanılmaya devam eder.
 - **Türkçe ve İngilizce arayüz:** Uygulama, sensör ekranları, sistem tepsisi menüsü ve Windows kurulum yöneticisi için dil desteği.
-- **Ek LCD yazı tipleri:** Inter, Orbitron ve JetBrains Mono dahil sekiz yeni yazı tipi ailesi; eski yazı tipi kimlikleri ve kayıtlı tasarımlar korunur.
+- **Ek LCD yazı tipleri:** Inter, Oxanium ve JetBrains Mono dahil sekiz yeni yazı tipi ailesi; eski yazı tipi kimlikleri ve kayıtlı tasarımlar korunur.
 - **Arayüz ve tasarım iyileştirmeleri:** Metin ve font görünümleri, çeviriler, yerleşim ayrıntıları ve kare LCD tasarım önizlemesi üzerinde düzenlemeler.
 - **Kurulum ve Windows hizmeti iyileştirmeleri:** Güncelleme sırasında çalışan uygulama, hizmet ve sensör yardımcısının yönetilmesi; iki dilli kurulum ekranları.
 

@@ -103,12 +103,14 @@ pub fn run(start_in_tray: bool) -> Result<(), String> {
         Instance::First(handle) => handle,
         Instance::AlreadyRunning => return Ok(()),
     };
-    // Skia renders text and shapes with proper anti-aliasing; fall back if it can't start.
-    if slint::BackendSelector::new().renderer_name("skia".into()).select().is_err() {
+    let prefs = Prefs::load();
+    // Skia renders text and shapes with proper anti-aliasing, on the GPU unless hardware
+    // acceleration is off; fall back to the default backend if it can't start.
+    let renderer = if prefs.hardware_acceleration { "skia" } else { "skia-software" };
+    if slint::BackendSelector::new().renderer_name(renderer.into()).select().is_err() {
         let _ = slint::BackendSelector::new().select();
     }
     let ui = AppWindow::new().map_err(|e| e.to_string())?;
-    let prefs = Prefs::load();
     let state = Rc::new(RefCell::new(State {
         prefs,
         tray: None,
@@ -350,6 +352,7 @@ fn init_ui(ui: &AppWindow, state: &State) {
     ui.set_language(state.prefs.language.clamp(0, 1));
     i18n::set_language(state.prefs.language);
     ui.set_preview_shape(state.prefs.preview_shape.clamp(0, 1));
+    ui.set_hardware_acceleration(state.prefs.hardware_acceleration);
     ui.set_display_off(state.cfg.display_off);
     let kinds: Vec<SharedString> = WidgetKind::ALL.iter().map(|k| {
         let name = localized_widget_kind(*k); name.into()
@@ -369,7 +372,6 @@ fn init_ui(ui: &AppWindow, state: &State) {
     ui.set_swatches(ModelRc::new(VecModel::from(swatches)));
     ui.set_stat_rows(ModelRc::from(state.rows.clone()));
     ui.set_media_name(media_label(&state.cfg).into());
-    ui.set_lhm_port(state.cfg.effective_lhm_port().to_string().into());
     ui.set_autostart(service::query_autostart().unwrap_or(false));
     ui.set_ffmpeg_state(tr("Checking…").into());
     load_design_into_ui(ui, &state.cfg);
@@ -539,7 +541,7 @@ fn sensor_category(kind: i32) -> (u8, &'static str) {
 fn friendly_sensor_label(r: &Reading) -> String {
     // Source prefix stays visible to distinguish identically named sensors.
     // The complete original reading key is preserved separately, never translated.
-    let source = if r.sensor.starts_with("Internal LHM · ") { "Dahili LHM" }
+    let source = if r.sensor.starts_with("Internal LHM · ") { tr("Internal LHM") }
         else if r.sensor.starts_with("LHM · ") { "LHM" }
         else if r.sensor.starts_with("HWiNFO · ") { "HWiNFO" }
         else if r.sensor.starts_with("NVML · ") { "NVML" }
@@ -978,6 +980,18 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
 
     let weak = ui.as_weak();
     let st = state.clone();
+    ui.on_hardware_acceleration_toggled(move |on| {
+        let Some(ui) = weak.upgrade() else { return };
+        let mut s = st.borrow_mut();
+        s.prefs.hardware_acceleration = on;
+        match s.prefs.save() {
+            Ok(()) => show_message(&ui, true, tr("Restart the app to apply the change.")),
+            Err(e) => show_message(&ui, false, format!("{}: {e}", tr("Could not save preference"))),
+        }
+    });
+
+    let weak = ui.as_weak();
+    let st = state.clone();
     ui.on_show_tray_toggled(move |on| {
         let Some(ui) = weak.upgrade() else { return };
         let mut s = st.borrow_mut();
@@ -1010,19 +1024,8 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         s.ffmpeg_progress_file = Some(PathBuf::from(format!("{}.progress", file.display())));
         ui.set_ffmpeg_busy(true);
         ui.set_ffmpeg_progress(0.0);
-        ui.set_ffmpeg_state("Downloading… (approve the admin prompt)".into());
+        ui.set_ffmpeg_state(tr("Downloading… (approve the admin prompt)").into());
         s.spawn(move || Job::FfmpegDownloaded(elevate("fetch-ffmpeg", &file)));
-    });
-
-    let weak = ui.as_weak();
-    let st = state.clone();
-    ui.on_lhm_port_edited(move |text| {
-        let Some(ui) = weak.upgrade() else { return };
-        if let Ok(port) = text.trim().parse::<u16>() {
-            let mut s = st.borrow_mut();
-            s.cfg.lhm_port = port;
-            save(&ui, &s);
-        }
     });
 
     ui.on_open_data_folder(|| {

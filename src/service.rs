@@ -5,7 +5,7 @@
 use std::ffi::OsString;
 use std::path::Path;
 use std::process::Command;
-use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -94,12 +94,12 @@ struct SensorState {
     summary: String,
 }
 
-/// Poll HWiNFO, LibreHardwareMonitor and NVML once a second.
-fn spawn_sensor_thread(state: Arc<Mutex<SensorState>>, stop: Arc<AtomicBool>, lhm_port: Arc<AtomicU16>) {
+/// Poll every sensor source once a second.
+fn spawn_sensor_thread(state: Arc<Mutex<SensorState>>, stop: Arc<AtomicBool>) {
     std::thread::spawn(move || {
         let mut hub = SensorHub::default();
         while !stop.load(Ordering::Relaxed) {
-            let (readings, summary) = hub.read(lhm_port.load(Ordering::Relaxed), &[]);
+            let (readings, summary) = hub.read(&[]);
             if let Ok(mut s) = state.lock() {
                 *s = SensorState { readings, summary };
             }
@@ -131,8 +131,7 @@ fn worker(stop_rx: &mpsc::Receiver<()>) {
     let stop = Arc::new(AtomicBool::new(false));
     let mut cfg = Config::load();
     let mut cfg_mtime = Config::modified();
-    let lhm_port = Arc::new(AtomicU16::new(cfg.effective_lhm_port()));
-    spawn_sensor_thread(sensors.clone(), stop.clone(), lhm_port.clone());
+    spawn_sensor_thread(sensors.clone(), stop.clone());
 
     let mut api: Option<HidApi> = None;
     let mut screen: Option<Screen> = None;
@@ -152,7 +151,6 @@ fn worker(stop_rx: &mpsc::Receiver<()>) {
         if mtime != cfg_mtime {
             cfg = Config::load();
             cfg_mtime = mtime;
-            lhm_port.store(cfg.effective_lhm_port(), Ordering::Relaxed);
         }
 
         if screen.is_none() {
