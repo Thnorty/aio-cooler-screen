@@ -27,6 +27,9 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
       - name: Test
         run: cargo test --release
@@ -40,6 +43,9 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: ./build-installer.ps1
+        env:
+          # Font downloads use the GitHub API, which rate-limits anonymous requests.
+          GH_TOKEN: ${{ github.token }}
 
       - name: Checksums
         shell: pwsh

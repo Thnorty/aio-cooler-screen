@@ -23,7 +23,7 @@ use crate::device::Screen;
 use crate::media::{encode_png, now_ms, timestamp_name, SCREEN_SIZE};
 use crate::overlay;
 use crate::protocol::MediaKind;
-use crate::sensors::{Reading, SensorHub, READING_TEMP, READING_USAGE};
+use crate::sensors::{Reading, SensorHub};
 
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 /// After this long without a successful update the screen may have gone dark (e.g. the

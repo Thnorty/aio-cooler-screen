@@ -1,10 +1,10 @@
-# AIO Cooler Screen — v1.2.4-Fork
+# AIO Cooler Screen
 
-[**English**](README.md) · [Orijinal proje](https://github.com/Thnorty/aio-cooler-screen) · [Sürümler](https://github.com/SefaMeert/aio-cooler-screen/releases)
+[**English**](README.md) · [Sürümler](../../releases)
 
-Uyumlu **Monster AIO sıvı soğutucuların LCD ekranları** (USB HID `1D6B:0130`) için Windows uygulaması. [Thnorty/aio-cooler-screen](https://github.com/Thnorty/aio-cooler-screen) projesinin SefaMeert tarafından geliştirilen topluluk fork'udur; Monster ile resmî bağlantısı yoktur. Diğer markalar ve LCD protokolleriyle uyumluluk doğrulanmamıştır.
+Uyumlu **Monster AIO sıvı soğutucuların LCD ekranları** (USB HID `1D6B:0130`) için açık kaynaklı Windows uygulaması. Monster ile resmî bağlantısı yoktur. Diğer markalar ve LCD protokolleriyle uyumluluk doğrulanmamıştır.
 
-## Fork sürümünde yaptığım geliştirmeler
+## Sensörler ve dil desteği
 
 - **Dahili LibreHardwareMonitor:** Paketle birlikte gelen .NET 8 sensör yardımcısı sayesinde ayrı LibreHardwareMonitor uygulaması veya HTTP sunucusu çalıştırmadan desteklenen donanım sensörlerini okuma.
 - **Genişletilmiş sensör bilgileri:** Donanımın desteklediği CPU frekansı, Vcore ve diğer voltajlar, anakart sensörleri, sıcaklıklar, fan ve pompa RPM değerleri arasından seçim yapabilme.
@@ -18,7 +18,7 @@ Uyumlu **Monster AIO sıvı soğutucuların LCD ekranları** (USB HID `1D6B:0130
 
 Sensörlerin kullanılabilirliği ve gereken erişim izinleri donanıma göre değişir. Fan/pompa RPM değerini okumak, fan hızını **kontrol etmek** anlamına gelmez. Ayrıntılar için [sensör rehberine](SENSOR-GUIDE.md) bakabilirsiniz.
 
-## Orijinal uygulamadan gelen özellikler
+## Diğer özellikler
 
 - **480 × 480 LCD arka planları:** Nebula, Aurora, Neon Rings ve Sunset adlı dört hazır arka plan; ayrıca PNG, JPG, BMP, WebP, animasyonlu GIF ve MP4, MOV, MKV, WebM gibi video dosyaları. Doldur, sığdır ve esnet seçenekleri.
 - **Dört hazır istatistik tasarımı:** Halka göstergeler, gösterge paneli kartları, tek büyük istatistik ve saat + istatistik düzeni; renk, font, boyut, kenarlık ve arka plan karartma ayarları.
@@ -46,7 +46,7 @@ Sensörlerin kullanılabilirliği ve gereken erişim izinleri donanıma göre de
 
 ## Kurulum
 
-1. **Windows 10/11 x64** için [Sürümler](https://github.com/SefaMeert/aio-cooler-screen/releases/tag/v1.2.4-Fork) sayfasından **`AIO-Cooler-Screen-Setup-1.2.4-Fork.exe`** dosyasını indirip çalıştırın. Kurulumda Türkçe veya İngilizce seçebilirsiniz. Tam paket Windows hizmetini, dahili sensör yardımcısını ve ek LCD yazı tiplerini içerir.
+1. **Windows 10/11 x64** için [Sürümler](../../releases) sayfasından **`AIO-Cooler-Screen-Setup-x.y.z.exe`** dosyasını indirip çalıştırın. Kurulumda Türkçe veya İngilizce seçebilirsiniz. Tam paket Windows hizmetini, dahili sensör yardımcısını ve ek LCD yazı tiplerini içerir.
 2. USB bağlantısında çakışmayı önlemek için AIO Cooler Screen'i kullanmadan önce Monster'ın orijinal LCD yazılımını kapatın.
 3. Uygulamayı açın, arka plan ve tasarım seçin; ardından Sensörler bölümünden istediğiniz değerleri belirleyin. Video ve animasyonlu arka planlar için isteğe bağlı FFmpeg gerekebilir.
 
@@ -56,6 +56,6 @@ Ayrı indirilebilen `aio-screen.exe` ileri düzey kullanım içindir ve **tam ku
 
 ## Ayrıntılı belgeler
 
-[Donanım sensörleri rehberi](SENSOR-GUIDE.md) · [Derleme ve kurulum paketi](FORK-BUILD-README.md) · [Ek yazı tipleri](FONT-README.md) · [Üçüncü taraf lisansları](THIRD-PARTY-NOTICES.md)
+[Donanım sensörleri rehberi](SENSOR-GUIDE.md) · [Ek yazı tipleri](FONT-README.md) · [Üçüncü taraf lisansları](THIRD-PARTY-NOTICES.md)
 
 Orijinal MIT lisansı [LICENSE](LICENSE) dosyasında korunmaktadır. Paketteki LibreHardwareMonitor bileşeninin ayrı MPL-2.0 yükümlülükleri üçüncü taraf bildirimlerinde açıklanmıştır.

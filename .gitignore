@@ -15,3 +15,7 @@ Thumbs.db
 
 # Local diagnostic output
 sensors.json
+
+# Fonts downloaded by tools/fetch-fonts.ps1
+/assets/fonts/*.ttf
+/assets/fonts/licenses/

@@ -51,6 +51,14 @@ if (-not (Test-Path assets\icon.ico)) {
 cargo build --release
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
+# --- Sensor helper (LibreHardwareMonitorLib, .NET 8) ------------------------------------------
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+    Write-Error ".NET SDK not found. Install the .NET 8 SDK or later from https://dotnet.microsoft.com/download, then rerun."
+}
+if (Test-Path sensor-probe-dist) { Remove-Item -Recurse -Force sensor-probe-dist }
+dotnet publish sensor-probe\SensorProbe.csproj -c Release -r win-x64 --self-contained true -o sensor-probe-dist
+if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
 # --- Installer --------------------------------------------------------------------------------
 $iscc = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
