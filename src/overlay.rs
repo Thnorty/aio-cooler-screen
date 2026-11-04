@@ -86,17 +86,36 @@ fn fonts(choice: FontChoice) -> Option<&'static Fonts> {
         .as_ref()
 }
 
+/// Segoe UI Semibold, for letters the chosen font lacks (Orbitron has no Ğ, İ or Ş).
+fn fallback_font() -> Option<&'static FontVec> {
+    static FALLBACK: OnceLock<Option<FontVec>> = OnceLock::new();
+    FALLBACK.get_or_init(|| load_font(r"C:\Windows\Fonts\seguisb.ttf", None)).as_ref()
+}
+
+/// The font that draws `c`: `font`, or the fallback when `font` has no glyph for it.
+fn font_for(font: &FontVec, c: char) -> &FontVec {
+    if font.glyph_id(c).0 == 0 {
+        if let Some(f) = fallback_font().filter(|f| f.glyph_id(c).0 != 0) {
+            return f;
+        }
+    }
+    font
+}
+
 fn text_width(font: &FontVec, size: f32, text: &str) -> f32 {
-    let sf = font.as_scaled(PxScale::from(size));
+    let scale = PxScale::from(size);
     let mut width = 0.0;
-    let mut prev = None;
+    let mut prev: Option<(&FontVec, _)> = None;
     for c in text.chars() {
+        let f = font_for(font, c);
+        let sf = f.as_scaled(scale);
         let id = sf.glyph_id(c);
-        if let Some(p) = prev {
+        // Kerning only applies between glyphs of the same font.
+        if let Some((_, p)) = prev.filter(|(pf, _)| std::ptr::eq(*pf, f)) {
             width += sf.kern(p, id);
         }
         width += sf.h_advance(id);
-        prev = Some(id);
+        prev = Some((f, id));
     }
     width
 }
@@ -121,21 +140,22 @@ fn blend(img: &mut RgbaImage, x: i32, y: i32, color: [u8; 4], alpha: f32) {
 
 fn draw_text(img: &mut RgbaImage, font: &FontVec, size: f32, x: f32, baseline: f32, text: &str, color: [u8; 4]) {
     let scale = PxScale::from(size);
-    let sf = font.as_scaled(scale);
     let mut caret = x;
-    let mut prev = None;
+    let mut prev: Option<(&FontVec, _)> = None;
     for c in text.chars() {
+        let f = font_for(font, c);
+        let sf = f.as_scaled(scale);
         let id = sf.glyph_id(c);
-        if let Some(p) = prev {
+        if let Some((_, p)) = prev.filter(|(pf, _)| std::ptr::eq(*pf, f)) {
             caret += sf.kern(p, id);
         }
         let glyph = id.with_scale_and_position(scale, point(caret, baseline));
-        if let Some(outline) = font.outline_glyph(glyph) {
+        if let Some(outline) = f.outline_glyph(glyph) {
             let b = outline.px_bounds();
             outline.draw(|gx, gy, cov| blend(img, b.min.x as i32 + gx as i32, b.min.y as i32 + gy as i32, color, cov));
         }
         caret += sf.h_advance(id);
-        prev = Some(id);
+        prev = Some((f, id));
     }
 }
 
@@ -368,11 +388,16 @@ fn tiles(pm: &mut Pixmap, o: &TilesOptions, v: &StatValues, t: &mut Texts, fonts
         return;
     }
     let cells: Vec<(Stat, String)> = o.show.iter().map(|&s| (s, format_value(s, v.get(s)))).collect();
+    let per_row = o.columns.clamp(1, 2) as usize;
+    // A row must fit on the screen; wide fonts with long (e.g. Turkish) labels would overflow it.
+    let max_tile_w = (SIZE - 24.0 - (per_row as f32 - 1.0) * GAP) / per_row as f32;
     let tile_w = cells
         .iter()
         .map(|(s, val)| text_width(&fonts.bold, value_size, val).max(text_width(&fonts.regular, label_size, tile_label(*s))) + 2.0 * PAD)
-        .fold(150.0, f32::max);
-    let per_row = o.columns.clamp(1, 2) as usize;
+        .fold(150.0, f32::max)
+        .min(max_tile_w);
+    let widest_label = cells.iter().map(|(s, _)| text_width(&fonts.regular, label_size, tile_label(*s))).fold(0.0, f32::max);
+    let label_size = if widest_label > tile_w - 2.0 * PAD { label_size * (tile_w - 2.0 * PAD) / widest_label } else { label_size };
     let rows: Vec<&[(Stat, String)]> = cells.chunks(per_row).collect();
     let block_h = rows.len() as f32 * h + (rows.len() as f32 - 1.0) * GAP;
     let top = match o.position {
@@ -497,10 +522,14 @@ fn clock(pm: &mut Pixmap, o: &ClockOptions, v: &StatValues, now: DateTime<Local>
         let y = if o.date { 366.0 } else { 330.0 };
         for (stat, cx) in [(a, CENTER - 72.0), (b, CENTER + 72.0)] {
             let value = v.get(stat);
-            if let Some(dot) = PathBuilder::from_circle(cx - 58.0, y, 6.0) {
+            let text = format!("{} {}", stat.label(), format_value(stat, value));
+            // Sit the dot just left of the text, which is wider in some fonts (Orbitron).
+            let size = 32.0 * look.text_scale.clamp(60, 140) as f32 / 100.0;
+            let left = cx + 4.0 - text_width(&fonts.regular, size, &text) / 2.0;
+            if let Some(dot) = PathBuilder::from_circle(left - 14.0, y, 6.0) {
                 pm.fill_path(&dot, &paint(stat_color(look, stat, value), 255), FillRule::Winding, Transform::identity(), None);
             }
-            t.add(false, 32.0, cx + 4.0, y + 12.0, format!("{} {}", stat.label(), format_value(stat, value)), rgba(look.text, 230));
+            t.add(false, 32.0, cx + 4.0, y + 12.0, text, rgba(look.text, 230));
         }
     }
 }
