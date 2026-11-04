@@ -207,6 +207,9 @@ pub struct StatsConfig {
     pub custom: Vec<CustomDesign>,
     /// Per-stat reading key chosen by the user; missing means automatic.
     pub sources: BTreeMap<String, String>,
+    /// Language of the text drawn on the screen: 0 English, 1 Turkish. The app keeps it in step
+    /// with its own language setting.
+    pub language: i32,
 }
 
 impl Default for StatsConfig {
@@ -220,6 +223,7 @@ impl Default for StatsConfig {
             clock: ClockOptions::default(),
             custom: Vec::new(),
             sources: BTreeMap::new(),
+            language: 0,
         }
     }
 }

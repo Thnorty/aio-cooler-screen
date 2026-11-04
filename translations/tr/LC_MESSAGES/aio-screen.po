@@ -777,3 +777,113 @@ msgstr "Canlı verileri göster"
 msgctxt "Rust"
 msgid "Quit"
 msgstr "Çıkış"
+
+msgctxt "Rust"
+msgid " (built-in)"
+msgstr " (yerleşik)"
+
+# Text drawn on the cooler screen.
+
+msgctxt "Screen"
+msgid "CPU TEMP"
+msgstr "CPU SICAKLIĞI"
+
+msgctxt "Screen"
+msgid "CPU LOAD"
+msgstr "CPU KULLANIMI"
+
+msgctxt "Screen"
+msgid "GPU TEMP"
+msgstr "GPU SICAKLIĞI"
+
+msgctxt "Screen"
+msgid "GPU LOAD"
+msgstr "GPU KULLANIMI"
+
+msgctxt "Screen"
+msgid "Load {}"
+msgstr "Kullanım {}"
+
+msgctxt "Screen"
+msgid "AM"
+msgstr "ÖÖ"
+
+msgctxt "Screen"
+msgid "PM"
+msgstr "ÖS"
+
+msgctxt "Screen"
+msgid "MON"
+msgstr "PZT"
+
+msgctxt "Screen"
+msgid "TUE"
+msgstr "SAL"
+
+msgctxt "Screen"
+msgid "WED"
+msgstr "ÇAR"
+
+msgctxt "Screen"
+msgid "THU"
+msgstr "PER"
+
+msgctxt "Screen"
+msgid "FRI"
+msgstr "CUM"
+
+msgctxt "Screen"
+msgid "SAT"
+msgstr "CMT"
+
+msgctxt "Screen"
+msgid "SUN"
+msgstr "PAZ"
+
+msgctxt "Screen"
+msgid "JAN"
+msgstr "OCA"
+
+msgctxt "Screen"
+msgid "FEB"
+msgstr "ŞUB"
+
+msgctxt "Screen"
+msgid "MAR"
+msgstr "MAR"
+
+msgctxt "Screen"
+msgid "APR"
+msgstr "NİS"
+
+msgctxt "Screen"
+msgid "MAY"
+msgstr "MAY"
+
+msgctxt "Screen"
+msgid "JUN"
+msgstr "HAZ"
+
+msgctxt "Screen"
+msgid "JUL"
+msgstr "TEM"
+
+msgctxt "Screen"
+msgid "AUG"
+msgstr "AĞU"
+
+msgctxt "Screen"
+msgid "SEP"
+msgstr "EYL"
+
+msgctxt "Screen"
+msgid "OCT"
+msgstr "EKİ"
+
+msgctxt "Screen"
+msgid "NOV"
+msgstr "KAS"
+
+msgctxt "Screen"
+msgid "DEC"
+msgstr "ARA"

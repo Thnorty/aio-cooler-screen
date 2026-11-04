@@ -130,6 +130,15 @@ pub fn run(start_in_tray: bool) -> Result<(), String> {
         drag_offset: None,
     }));
 
+    {
+        // The service draws the screen text in the language saved in the shared config.
+        let mut s = state.borrow_mut();
+        let language = s.prefs.language.clamp(0, 1);
+        if s.cfg.stats.language != language {
+            s.cfg.stats.language = language;
+            if let Err(e) = s.cfg.save() { eprintln!("Failed to save screen language: {e}"); }
+        }
+    }
     init_ui(&ui, &state.borrow());
     {
         let mut s = state.borrow_mut();
@@ -326,7 +335,10 @@ fn builtin_index(cfg: &Config) -> i32 {
 
 fn media_label(cfg: &Config) -> String {
     match (&cfg.media_source, &cfg.media_file) {
-        (Some(src), _) => format!("{src}{}", if cfg.media_is_video { " (video)" } else { "" }),
+        (Some(src), _) => match src.strip_suffix(BUILTIN_SUFFIX) {
+            Some(name) => format!("{name}{}", tr(BUILTIN_SUFFIX)),
+            None => format!("{src}{}", if cfg.media_is_video { " (video)" } else { "" }),
+        },
         (None, Some(_)) => (if cfg.media_is_video { tr("Your video") } else { tr("Your image") }).into(),
         (None, None) => tr("No background set").into(),
     }
@@ -664,6 +676,8 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
             s.prefs.language = lang.clamp(0, 1);
             if let Err(e) = s.prefs.save() { eprintln!("Failed to save language: {e}"); }
             i18n::set_language(s.prefs.language);
+            s.cfg.stats.language = s.prefs.language;
+            save(&ui, &s);
             if let Some(tray) = &s.tray { tray.refresh_language(); }
             // Force localized sensor-picker text to refresh immediately.
             s.rows_sig.clear();
@@ -675,6 +689,7 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
             ui.set_widget_kinds(ModelRc::new(VecModel::from(kinds)));
             update_ffmpeg_ui(&ui, &s);
             ui.set_media_name(media_label(&s.cfg).into());
+            refresh_preview(&ui, &s);
         });
     }
 

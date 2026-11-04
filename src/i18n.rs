@@ -1,6 +1,7 @@
 //! Interface language. The .slint UI marks its strings with Slint's `@tr` and gets them from the
 //! bundled translations; strings set from Rust go through [`tr`], which reads the same `.po` file
-//! (entries with `msgctxt "Rust"`).
+//! (entries with `msgctxt "Rust"`). Text drawn on the cooler screen uses [`screen_tr`]
+//! (`msgctxt "Screen"`), since the service draws it without the window.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -22,21 +23,33 @@ pub fn set_language(language: i32) {
 
 /// The current translation of an English string, or the string itself.
 pub fn tr(english: &'static str) -> &'static str {
-    if LANGUAGE.load(Ordering::Relaxed) != 1 {
-        return english;
-    }
-    static TURKISH: OnceLock<HashMap<String, String>> = OnceLock::new();
-    TURKISH.get_or_init(|| parse_po(TURKISH_PO, "Rust")).get(english).map_or(english, |s| s.as_str())
+    lookup(LANGUAGE.load(Ordering::Relaxed), "Rust", english)
 }
 
-/// msgid → msgstr for the entries with the given msgctxt. Empty translations are skipped.
-fn parse_po(po: &str, context: &str) -> HashMap<String, String> {
+/// Text drawn on the cooler screen, in the language saved in the shared config.
+pub fn screen_tr(language: i32, english: &'static str) -> &'static str {
+    lookup(language, "Screen", english)
+}
+
+fn lookup(language: i32, context: &str, english: &'static str) -> &'static str {
+    if language != 1 {
+        return english;
+    }
+    static TURKISH: OnceLock<HashMap<(String, String), String>> = OnceLock::new();
+    TURKISH
+        .get_or_init(|| parse_po(TURKISH_PO))
+        .get(&(context.to_string(), english.to_string()))
+        .map_or(english, |s| s.as_str())
+}
+
+/// (msgctxt, msgid) → msgstr. Empty translations are skipped.
+fn parse_po(po: &str) -> HashMap<(String, String), String> {
     let mut map = HashMap::new();
     let (mut ctx, mut id, mut text) = (String::new(), String::new(), String::new());
     let mut field: Option<&str> = None;
     let mut flush = |ctx: &mut String, id: &mut String, text: &mut String| {
-        if ctx == context && !id.is_empty() && !text.is_empty() {
-            map.insert(std::mem::take(id), std::mem::take(text));
+        if !id.is_empty() && !text.is_empty() {
+            map.insert((std::mem::take(ctx), std::mem::take(id)), std::mem::take(text));
         }
         ctx.clear();
         id.clear();
@@ -94,16 +107,21 @@ mod tests {
                   msgctxt \"Rust\"\nmsgid \"Quit\"\nmsgstr \"Çıkış\"\n\n\
                   msgctxt \"AppWindow\"\nmsgid \"Quit\"\nmsgstr \"Başka\"\n\n\
                   msgctxt \"Rust\"\nmsgid \"\"\n\"Say \\\"hi\\\"\"\nmsgstr \"\\\"Selam\\\"\\nde\"\n";
-        let map = parse_po(po, "Rust");
-        assert_eq!(map.len(), 2);
-        assert_eq!(map["Quit"], "Çıkış");
-        assert_eq!(map["Say \"hi\""], "\"Selam\"\nde");
+        let map = parse_po(po);
+        let get = |ctx: &str, id: &str| map[&(ctx.to_string(), id.to_string())].as_str();
+        assert_eq!(map.len(), 3);
+        assert_eq!(get("Rust", "Quit"), "Çıkış");
+        assert_eq!(get("AppWindow", "Quit"), "Başka");
+        assert_eq!(get("Rust", "Say \"hi\""), "\"Selam\"\nde");
     }
 
     #[test]
-    fn every_rust_string_is_translated() {
-        let map = parse_po(TURKISH_PO, "Rust");
-        assert!(map.len() > 40, "only {} Rust entries", map.len());
-        assert!(map.values().all(|v| !v.is_empty()));
+    fn rust_and_screen_strings_are_translated() {
+        let map = parse_po(TURKISH_PO);
+        let count = |ctx: &str| map.keys().filter(|(c, _)| c == ctx).count();
+        assert!(count("Rust") > 40, "only {} Rust entries", count("Rust"));
+        assert!(count("Screen") > 20, "only {} Screen entries", count("Screen"));
+        assert_eq!(screen_tr(1, "WED"), "ÇAR");
+        assert_eq!(screen_tr(0, "WED"), "WED");
     }
 }

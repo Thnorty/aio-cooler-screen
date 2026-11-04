@@ -2,10 +2,11 @@
 //! background media. Shapes use tiny-skia; text uses Windows fonts via ab_glyph.
 
 use std::f32::consts::PI;
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::OnceLock;
 
 use ab_glyph::{point, Font, FontVec, PxScale, ScaleFont, VariableFont};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Datelike, Local, Timelike};
 use image::RgbaImage;
 use tiny_skia::{
     Color, FillRule, GradientStop, LineCap, Paint, PathBuilder, Pixmap, Point, RadialGradient, Rect, SpreadMode,
@@ -16,6 +17,7 @@ use crate::config::{
     BigStatOptions, ClockOptions, ClockStats, CustomDesign, Design, FontChoice, GaugesOptions, Look, Position,
     StatValues, StatsConfig, TilesOptions, Widget, WidgetKind,
 };
+use crate::i18n::screen_tr;
 use crate::media::SCREEN_SIZE;
 use crate::sensors::Stat;
 
@@ -298,12 +300,19 @@ fn rgba(rgb: Rgb, a: u8) -> [u8; 4] {
     [rgb[0], rgb[1], rgb[2], a]
 }
 
+/// Language of the text on the screen, from the config being drawn (0 English, 1 Turkish).
+static LANGUAGE: AtomicI32 = AtomicI32::new(0);
+
+fn tl(english: &'static str) -> &'static str {
+    screen_tr(LANGUAGE.load(Ordering::Relaxed), english)
+}
+
 fn tile_label(stat: Stat) -> &'static str {
     match stat {
-        Stat::CpuTemp => "CPU TEMP",
-        Stat::CpuLoad => "CPU LOAD",
-        Stat::GpuTemp => "GPU TEMP",
-        Stat::GpuLoad => "GPU LOAD",
+        Stat::CpuTemp => tl("CPU TEMP"),
+        Stat::CpuLoad => tl("CPU LOAD"),
+        Stat::GpuTemp => tl("GPU TEMP"),
+        Stat::GpuLoad => tl("GPU LOAD"),
     }
 }
 
@@ -340,7 +349,7 @@ fn gauges(pm: &mut Pixmap, o: &GaugesOptions, v: &StatValues, t: &mut Texts) {
         }
         t.add(true, 76.0, cx, 268.0, format_value(temp, v.get(temp)), rgba(look.text, 255));
         if o.load_rings || o.labels {
-            t.add(false, 28.0, cx, 312.0, format!("Load {}", format_value(load, v.get(load))), rgba(look.text, 190));
+            t.add(false, 28.0, cx, 312.0, tl("Load {}").replace("{}", &format_value(load, v.get(load))), rgba(look.text, 190));
         }
     }
     if let Some(rect) = Rect::from_xywh(CENTER - 1.0, 170.0, 2.0, 150.0) {
@@ -426,12 +435,21 @@ fn time_parts(now: DateTime<Local>, h24: bool) -> (String, Option<String>) {
     if h24 {
         (now.format("%H:%M").to_string(), None)
     } else {
-        (now.format("%-I:%M").to_string(), Some(now.format("%p").to_string()))
+        (now.format("%-I:%M").to_string(), Some(tl(if now.hour12().0 { "PM" } else { "AM" }).to_string()))
     }
 }
 
 fn date_text(now: DateTime<Local>, h24: bool) -> String {
-    if h24 { now.format("%a %-d %b") } else { now.format("%a, %b %-d") }.to_string().to_uppercase()
+    const DAYS: [&str; 7] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+    const MONTHS: [&str; 12] = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    let day = tl(DAYS[now.weekday().num_days_from_monday() as usize]);
+    let month = tl(MONTHS[now.month0() as usize]);
+    // Turkish always writes the day before the month.
+    if h24 || LANGUAGE.load(Ordering::Relaxed) == 1 {
+        format!("{day} {} {month}", now.day())
+    } else {
+        format!("{day}, {month} {}", now.day())
+    }
 }
 
 /// Sizes of the digits and the AM/PM suffix, and the gap between them (all scaled).
@@ -580,6 +598,7 @@ pub fn hit_test(d: &CustomDesign, v: &StatValues, now: DateTime<Local>, x: f32, 
 
 /// Render the overlay. Returns a fully transparent image when stats are disabled.
 pub fn render(cfg: &StatsConfig, values: &StatValues, now: DateTime<Local>) -> RgbaImage {
+    LANGUAGE.store(cfg.language, Ordering::Relaxed);
     let blank = || RgbaImage::new(SCREEN_SIZE, SCREEN_SIZE);
     let look = cfg.look();
     let (Some(fonts), Some(mut pm)) = (fonts(look.font), Pixmap::new(SCREEN_SIZE, SCREEN_SIZE)) else { return blank() };
