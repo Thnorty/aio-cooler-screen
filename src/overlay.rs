@@ -44,8 +44,16 @@ fn first_font(candidates: &[(String, Option<f32>)]) -> Option<FontVec> {
     candidates.iter().find_map(|(p, w)| load_font(p, *w))
 }
 
+// Bundled OFL fonts are installed alongside the executable (not into Windows Fonts).
+fn bundled_font(name: &str) -> String {
+    std::env::current_exe().ok()
+        .and_then(|p| p.parent().map(|d| d.join("fonts").join(name)))
+        .unwrap_or_else(|| std::path::PathBuf::from("fonts").join(name))
+        .to_string_lossy().into_owned()
+}
+
 fn fonts(choice: FontChoice) -> Option<&'static Fonts> {
-    static FONTS: [OnceLock<Option<Fonts>>; 4] = [OnceLock::new(), OnceLock::new(), OnceLock::new(), OnceLock::new()];
+    static FONTS: [OnceLock<Option<Fonts>>; 12] = [const { OnceLock::new() }; 12];
     let idx = FontChoice::ALL.iter().position(|c| *c == choice).unwrap_or(0);
     FONTS[idx]
         .get_or_init(|| {
@@ -57,6 +65,14 @@ fn fonts(choice: FontChoice) -> Option<&'static Fonts> {
                 }
                 FontChoice::Arial => (vec![(format!("{F}arialbd.ttf"), None)], vec![(format!("{F}arial.ttf"), None)]),
                 FontChoice::Consolas => (vec![(format!("{F}consolab.ttf"), None)], vec![(format!("{F}consola.ttf"), None)]),
+                FontChoice::GoogleSans => (vec![(bundled_font("GoogleSans-Bold.ttf"), Some(700.0))], vec![(bundled_font("GoogleSans-Regular.ttf"), Some(400.0))]),
+                FontChoice::GoogleSansFlex => (vec![(bundled_font("GoogleSansFlex-Bold.ttf"), Some(700.0))], vec![(bundled_font("GoogleSansFlex-Regular.ttf"), Some(400.0))]),
+                FontChoice::Inter => (vec![(bundled_font("Inter-Bold.ttf"), Some(700.0))], vec![(bundled_font("Inter-Regular.ttf"), Some(400.0))]),
+                FontChoice::Rajdhani => (vec![(bundled_font("Rajdhani-Bold.ttf"), Some(700.0))], vec![(bundled_font("Rajdhani-Regular.ttf"), Some(400.0))]),
+                FontChoice::Orbitron => (vec![(bundled_font("Orbitron-Bold.ttf"), Some(700.0))], vec![(bundled_font("Orbitron-Regular.ttf"), Some(400.0))]),
+                FontChoice::JetBrainsMono => (vec![(bundled_font("JetBrainsMono-Bold.ttf"), Some(700.0))], vec![(bundled_font("JetBrainsMono-Regular.ttf"), Some(400.0))]),
+                FontChoice::RobotoCondensed => (vec![(bundled_font("RobotoCondensed-Bold.ttf"), Some(700.0))], vec![(bundled_font("RobotoCondensed-Regular.ttf"), Some(400.0))]),
+                FontChoice::Oswald => (vec![(bundled_font("Oswald-Bold.ttf"), Some(700.0))], vec![(bundled_font("Oswald-Regular.ttf"), Some(400.0))]),
             };
             // Fall back to Segoe UI / Arial when a font is missing.
             let fallback_bold = [(format!("{F}segoeuib.ttf"), None), (format!("{F}arialbd.ttf"), None)];
@@ -477,7 +493,9 @@ fn clock(pm: &mut Pixmap, o: &ClockOptions, v: &StatValues, now: DateTime<Local>
 fn widget_color(look: &Look, w: &Widget, v: &StatValues) -> Rgb {
     match (w.auto_color, w.kind) {
         (false, _) => w.color,
-        (true, WidgetKind::Ring | WidgetKind::Bar) => stat_color(look, w.stat, v.get(w.stat)),
+        (true, WidgetKind::Ring | WidgetKind::Bar) => {
+            if w.sensor_key.is_some() { look.accent } else { stat_color(look, w.stat, v.get(w.stat)) }
+        },
         (true, _) => look.text,
     }
 }
@@ -485,7 +503,7 @@ fn widget_color(look: &Look, w: &Widget, v: &StatValues) -> Rgb {
 /// The text a text widget shows (time widgets also return their AM/PM suffix).
 fn widget_text(d: &CustomDesign, w: &Widget, v: &StatValues, now: DateTime<Local>) -> (String, Option<String>) {
     match w.kind {
-        WidgetKind::Value => (format_value(w.stat, v.get(w.stat)), None),
+        WidgetKind::Value => (v.widget_text(w), None),
         WidgetKind::Label => (w.text.clone(), None),
         WidgetKind::Time => time_parts(now, d.h24),
         WidgetKind::Date => (date_text(now, d.h24), None),
@@ -507,12 +525,12 @@ fn custom(pm: &mut Pixmap, d: &CustomDesign, v: &StatValues, now: DateTime<Local
             WidgetKind::Ring => {
                 let (start, sweep) = (135.0_f32, 270.0_f32);
                 stroke_arc_at(pm, w.x, w.y, w.size, start, start + sweep, w.thickness, track, 34);
-                stroke_arc_at(pm, w.x, w.y, w.size, start, start + sweep * fraction(v.get(w.stat)), w.thickness, color, 255);
+                stroke_arc_at(pm, w.x, w.y, w.size, start, start + sweep * v.widget_fraction(w), w.thickness, color, 255);
             }
             WidgetKind::Bar => {
                 let (x, y, h) = (w.x - w.size / 2.0, w.y - w.thickness / 2.0, w.thickness.max(2.0));
                 fill_rounded_rect(pm, x, y, w.size, h, h / 2.0, track, 40);
-                let filled = (w.size * fraction(v.get(w.stat))).max(h);
+                let filled = (w.size * v.widget_fraction(w)).max(h);
                 fill_rounded_rect(pm, x, y, filled, h, h / 2.0, color, 255);
             }
             WidgetKind::Time => push_time(t, fonts, w.size, w.x, text_baseline(w.y, scaled), now, d.h24, rgba(color, 255)),

@@ -1,3 +1,17 @@
-/target
-/dist
-/third_party
+# Build and downloaded dependencies
+/target/
+/dist/
+/third_party/
+/sensor-probe-dist/
+**/bin/
+**/obj/
+
+# Local editor and OS files
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local diagnostic output
+sensors.json

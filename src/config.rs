@@ -61,7 +61,7 @@ impl Design {
             Design::Gauges => "Ring gauges",
             Design::Tiles => "Dashboard tiles",
             Design::BigStat => "Big single stat",
-            Design::Clock => "Clock + stats",
+            Design::Clock => "Clock and stats",
             Design::Custom(_) => "Custom",
         }
     }
@@ -113,6 +113,10 @@ pub struct Widget {
     /// Ring or bar thickness, in pixels.
     pub thickness: f32,
     pub stat: Stat,
+    /// Optional direct sensor source for custom widgets (legacy stat is the fallback).
+    pub sensor_key: Option<String>,
+    /// Maximum used to scale a ring/bar for non-percent sensors.
+    pub sensor_max: f64,
     /// Text for label widgets.
     pub text: String,
     pub color: [u8; 3],
@@ -131,6 +135,8 @@ impl Default for Widget {
             size: 90.0,
             thickness: 14.0,
             stat: Stat::CpuTemp,
+            sensor_key: None,
+            sensor_max: 100.0,
             text: "CPU".into(),
             color: [255, 255, 255],
             auto_color: true,
@@ -224,10 +230,18 @@ pub enum FontChoice {
     Bahnschrift,
     Arial,
     Consolas,
+    GoogleSans,
+    GoogleSansFlex,
+    Inter,
+    Rajdhani,
+    Orbitron,
+    JetBrainsMono,
+    RobotoCondensed,
+    Oswald,
 }
 
 impl FontChoice {
-    pub const ALL: [FontChoice; 4] = [FontChoice::SegoeUi, FontChoice::Bahnschrift, FontChoice::Arial, FontChoice::Consolas];
+    pub const ALL: [FontChoice; 12] = [FontChoice::SegoeUi, FontChoice::Bahnschrift, FontChoice::Arial, FontChoice::Consolas, FontChoice::GoogleSans, FontChoice::GoogleSansFlex, FontChoice::Inter, FontChoice::Rajdhani, FontChoice::Orbitron, FontChoice::JetBrainsMono, FontChoice::RobotoCondensed, FontChoice::Oswald];
 }
 
 /// Colours and text styling; every design keeps its own.
@@ -344,17 +358,54 @@ impl Default for ClockOptions {
 }
 
 /// Current value of every stat (None when no reading is available).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct StatValues(pub [Option<f64>; 4]);
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct StatValues(pub [Option<f64>; 4], pub Vec<Reading>);
 
 impl StatValues {
+    pub fn widget_reading(&self, widget: &Widget) -> Option<&Reading> {
+        widget.sensor_key.as_ref().and_then(|key| self.1.iter().find(|r| &r.key == key))
+    }
+
+    pub fn widget_value(&self, widget: &Widget) -> Option<f64> {
+        if widget.sensor_key.is_some() {
+            self.widget_reading(widget).map(|r| r.value)
+        } else {
+            self.get(widget.stat)
+        }
+    }
+
+    pub fn widget_fraction(&self, widget: &Widget) -> f32 {
+        let value = self.widget_value(widget).unwrap_or(0.0);
+        let max = if widget.sensor_key.is_some() { widget.sensor_max } else { 100.0 };
+        if max.is_finite() && max > 0.0 { (value / max).clamp(0.0, 1.0) as f32 } else { 0.0 }
+    }
+
+    pub fn widget_text(&self, widget: &Widget) -> String {
+        if widget.sensor_key.is_none() {
+            return match self.get(widget.stat) {
+                Some(v) if widget.stat.is_temp() => format!("{v:.0}°"),
+                Some(v) => format!("{v:.0}%"),
+                None => "--".into(),
+            };
+        }
+        match self.widget_reading(widget) {
+            Some(r) => {
+                let formatted = if r.value.abs() < 10.0 && r.kind != 3 && r.kind != 6 {
+                    format!("{:.2}", r.value)
+                } else { format!("{:.0}", r.value) };
+                if r.units.is_empty() { formatted } else { format!("{} {}", formatted, r.units) }
+            }
+            None => "--".into(),
+        }
+    }
+
     pub fn get(&self, stat: Stat) -> Option<f64> {
         self.0[Stat::ALL.iter().position(|s| *s == stat).unwrap_or(0)]
     }
 
     /// Plausible values for previews before the service reports real ones.
     pub fn sample() -> Self {
-        StatValues([Some(58.0), Some(23.0), Some(47.0), Some(12.0)])
+        StatValues([Some(58.0), Some(23.0), Some(47.0), Some(12.0)], Vec::new())
     }
 }
 
@@ -419,7 +470,7 @@ impl StatsConfig {
     }
 
     pub fn resolve(&self, readings: &[Reading]) -> StatValues {
-        StatValues(Stat::ALL.map(|s| self.reading(s, readings).map(|r| r.value)))
+        StatValues(Stat::ALL.map(|s| self.reading(s, readings).map(|r| r.value)), readings.to_vec())
     }
 }
 

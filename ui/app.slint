@@ -177,6 +177,7 @@ component RoundTile inherits Rectangle {
 }
 
 component NewDesignTile inherits Rectangle {
+    in property <int> language;
     callback clicked;
     width: 112px;
     height: 150px;
@@ -192,7 +193,7 @@ component NewDesignTile inherits Rectangle {
             font-size: 28px;
         }
         Text {
-            text: "New design";
+            text: root.language == 1 ? ("Yeni tasarım") : ("New design");
             horizontal-alignment: center;
             font-size: 12px;
             color: Palette.foreground;
@@ -287,11 +288,14 @@ export component AppWindow inherits Window {
 
     in property <image> app-icon;
     in property <string> version;
+    in-out property <int> language: 0; // 0 English, 1 Turkish
+    callback language-changed(int);
     in-out property <int> page: 0;
 
     // Preview (Background and Design pages)
     in property <image> preview;
     in property <bool> preview-live;
+    in-out property <int> preview-shape: 0; // 0 = square, 1 = round
     in property <bool> official-running;
     in property <bool> sensors-ok;
 
@@ -361,6 +365,8 @@ export component AppWindow inherits Window {
     in property <float> w-size-min: 8;
     in property <float> w-size-max: 480;
     in-out property <int> w-stat;
+    in property <[string]> widget-sensor-choices;
+    in-out property <float> w-sensor-max: 100;
     in-out property <string> w-text;
     in-out property <float> w-size;
     in-out property <float> w-thickness;
@@ -406,6 +412,7 @@ export component AppWindow inherits Window {
     callback preview-pressed(float, float);
     callback preview-dragged(float, float);
     callback preview-released();
+    callback preview-shape-changed(int);
     callback settings-changed();
     callback source-selected(int, int);
     callback repair-service();
@@ -447,32 +454,32 @@ export component AppWindow inherits Window {
                 }
                 NavItem {
                     glyph: "\u{EB9F}";
-                    text: "Background";
+                    text: root.language == 1 ? ("Arka plan") : ("Background");
                     selected: root.page == 0;
                     clicked => { root.page = 0; }
                 }
                 NavItem {
                     glyph: "\u{E790}";
-                    text: "Design";
+                    text: root.language == 1 ? ("Tasarım") : ("Design");
                     selected: root.page == 1;
                     clicked => { root.page = 1; }
                 }
                 NavItem {
                     glyph: "\u{E9D9}";
-                    text: "Sensors";
+                    text: root.language == 1 ? ("Sensörler") : ("Sensors");
                     selected: root.page == 2;
                     clicked => { root.page = 2; }
                 }
                 NavItem {
                     glyph: "\u{E713}";
-                    text: "Settings";
+                    text: root.language == 1 ? ("Ayarlar") : ("Settings");
                     selected: root.page == 3;
                     clicked => { root.page = 3; }
                 }
                 Rectangle { vertical-stretch: 1; }
                 NavItem {
                     glyph: "\u{E7E8}";
-                    text: root.display-off ? "Turn on display" : "Turn off display";
+                    text: root.language == 1 ? (root.display-off ? "Ekranı aç" : "Ekranı kapat") : (root.display-off ? "Turn on display" : "Turn off display");
                     clicked => { root.toggle-display(); }
                 }
                 Rectangle {
@@ -491,7 +498,7 @@ export component AppWindow inherits Window {
                             }
                         }
                         Text {
-                            text: root.display-off ? "Display off" : root.cooler-state;
+                            text: root.language == 1 ? (root.display-off ? "Ekran kapalı" : root.cooler-state) : (root.display-off ? "Display off" : root.cooler-state);
                             font-size: 12px;
                             color: Palette.foreground;
                             vertical-alignment: center;
@@ -523,12 +530,12 @@ export component AppWindow inherits Window {
                         padding-right: 12px;
                         alignment: start;
                         PageHeader {
-                            title: "Background";
-                            subtitle: "What the screen shows behind your stats.";
+                            title: root.language == 1 ? ("Arka plan") : ("Background");
+                            subtitle: root.language == 1 ? ("İstatistiklerin arkasında gösterilecek görüntü.") : ("What the screen shows behind your stats.");
                         }
                         Card {
-                            title: "Built-in backgrounds";
-                            subtitle: "Click one to put it on the screen.";
+                            title: root.language == 1 ? ("Hazır arka planlar") : ("Built-in backgrounds");
+                            subtitle: root.language == 1 ? ("Ekrana uygulamak için birini seç.") : ("Click one to put it on the screen.");
                             HorizontalLayout {
                                 spacing: 8px;
                                 alignment: start;
@@ -541,8 +548,8 @@ export component AppWindow inherits Window {
                             }
                         }
                         Card {
-                            title: "Your image or video";
-                            subtitle: "PNG, JPG, BMP, WebP, or MP4/MOV/MKV/WebM/AVI/WMV videos and animated GIFs.";
+                            title: root.language == 1 ? ("Görselin veya videon") : ("Your image or video");
+                            subtitle: root.language == 1 ? ("PNG, JPG, BMP, WebP görselleri; MP4/MOV/MKV/WebM/AVI/WMV videoları ve hareketli GIF dosyaları.") : ("PNG, JPG, BMP, WebP, or MP4/MOV/MKV/WebM/AVI/WMV videos and animated GIFs.");
                             HorizontalLayout {
                                 spacing: 8px;
                                 Rectangle {
@@ -555,7 +562,7 @@ export component AppWindow inherits Window {
                                     Text {
                                         x: 10px;
                                         width: parent.width - 20px;
-                                        text: root.source-path == "" ? "Choose a file…" : root.source-path;
+                                        text: root.language == 1 ? (root.source-path == "" ? "Dosya seç…" : root.source-path) : (root.source-path == "" ? "Choose a file…" : root.source-path);
                                         opacity: root.source-path == "" ? 0.6 : 1;
                                         color: Palette.foreground;
                                         font-size: 13px;
@@ -564,23 +571,23 @@ export component AppWindow inherits Window {
                                     }
                                 }
                                 Button {
-                                    text: "Browse…";
+                                    text: root.language == 1 ? ("Gözat…") : ("Browse…");
                                     clicked => { root.browse(); }
                                 }
                             }
                             if root.source-is-video && !root.ffmpeg-ok: InfoBar {
                                 warning: true;
-                                text: root.ffmpeg-busy ? "Downloading ffmpeg…" : "Videos need ffmpeg, which isn't installed yet.";
+                                text: root.language == 1 ? (root.ffmpeg-busy ? "ffmpeg indiriliyor…" : "Videolar için ffmpeg gerekiyor; henüz kurulu değil.") : (root.ffmpeg-busy ? "Downloading ffmpeg…" : "Videos need ffmpeg, which isn't installed yet.");
                                 if !root.ffmpeg-busy: Button {
-                                    text: "Download ffmpeg";
+                                    text: root.language == 1 ? ("ffmpeg indir") : ("Download ffmpeg");
                                     clicked => { root.download-ffmpeg(); }
                                 }
                             }
                             SettingRow {
-                                label: "Fit";
+                                label: root.language == 1 ? "Sığdır" : "Fit";
                                 ComboBox {
                                     width: 220px;
-                                    model: ["Crop to fill", "Fit inside (black bars)", "Stretch"];
+                                    model: root.language == 1 ? ["Dolduracak şekilde kırp", "Sığdır (siyah kenarlar)", "Esnet"] : ["Crop to fill", "Fit inside (black bars)", "Stretch"];
                                     current-index <=> root.fit;
                                 }
                             }
@@ -598,7 +605,7 @@ export component AppWindow inherits Window {
                                     color: Palette.foreground;
                                 }
                                 Button {
-                                    text: "Apply to screen";
+                                    text: root.language == 1 ? ("Ekrana uygula") : ("Apply to screen");
                                     primary: true;
                                     enabled: !root.busy && root.source-path != "" && (root.ffmpeg-ok || !root.source-is-video);
                                     clicked => { root.apply-media(); }
@@ -620,13 +627,13 @@ export component AppWindow inherits Window {
                         padding-right: 12px;
                         alignment: start;
                         PageHeader {
-                            title: "Design";
-                            subtitle: "How live stats are drawn on top of the background. Each design keeps its own settings.";
+                            title: root.language == 1 ? ("Tasarım") : ("Design");
+                            subtitle: root.language == 1 ? ("Canlı verilerin arka plan üzerinde görünümü. Her tasarımın ayarları ayrıdır.") : ("How live stats are drawn on top of the background. Each design keeps its own settings.");
                         }
                         Card {
                             SettingRow {
-                                label: "Show live stats";
-                                hint: "Turn off to show only the background.";
+                                label: root.language == 1 ? "Canlı verileri göster" : "Show live stats";
+                                hint: root.language == 1 ? "Yalnızca arka planı göstermek için kapat." : "Turn off to show only the background.";
                                 Switch {
                                     checked <=> root.stats-enabled;
                                     toggled => { root.settings-changed(); }
@@ -634,7 +641,7 @@ export component AppWindow inherits Window {
                             }
                         }
                         Card {
-                            title: "Designs";
+                            title: root.language == 1 ? ("Tasarımlar") : ("Designs");
                             ScrollView {
                                 height: 168px;
                                 content-width: gallery.preferred-width;
@@ -649,6 +656,7 @@ export component AppWindow inherits Window {
                                         clicked => { root.design-selected(i); }
                                     }
                                     NewDesignTile {
+                                        language: root.language;
                                         clicked => { root.new-design(); }
                                     }
                                 }
@@ -657,13 +665,13 @@ export component AppWindow inherits Window {
 
                         // Options of the selected built-in design, or the editor for a custom one.
                         Card {
-                            title: root.design >= 4 ? "Edit " + root.design-names[root.design] : root.design-names[root.design] + " options";
-                            subtitle: root.design >= 4 ? "Add widgets, pick one to change it, and drag widgets in the preview to move them." : "";
+                            title: root.language == 1 ? (root.design >= 4 ? "Düzenle: " + root.design-names[root.design] : root.design-names[root.design] + " seçenekleri") : (root.design >= 4 ? "Edit " + root.design-names[root.design] : root.design-names[root.design] + " options");
+                            subtitle: root.language == 1 ? (root.design >= 4 ? "Bileşen ekle, düzenlemek için seç ve önizlemede sürükleyerek taşı." : "") : (root.design >= 4 ? "Add widgets, pick one to change it, and drag widgets in the preview to move them." : "");
 
                             if root.design >= 4: VerticalLayout {
                                 spacing: 12px;
                                 SettingRow {
-                                    label: "Name";
+                                    label: root.language == 1 ? "Ad" : "Name";
                                     LineEdit {
                                         width: 240px;
                                         text <=> root.custom-name;
@@ -671,8 +679,8 @@ export component AppWindow inherits Window {
                                     }
                                 }
                                 SettingRow {
-                                    label: "24-hour time";
-                                    hint: "Off shows AM/PM in time widgets.";
+                                    label: root.language == 1 ? "24 saat biçimi" : "24-hour time";
+                                    hint: root.language == 1 ? "Kapatıldığında saat bileşenlerinde AM/PM gösterilir." : "Off shows AM/PM in time widgets.";
                                     Switch {
                                         checked <=> root.cu-h24;
                                         toggled => { root.settings-changed(); }
@@ -686,16 +694,16 @@ export component AppWindow inherits Window {
                                         current-index <=> root.add-kind;
                                     }
                                     Button {
-                                        text: "Add widget";
+                                        text: root.language == 1 ? ("Bileşen ekle") : ("Add widget");
                                         clicked => { root.add-widget(root.add-kind); }
                                     }
                                     Rectangle { horizontal-stretch: 1; }
                                     Button {
-                                        text: "Duplicate";
+                                        text: root.language == 1 ? ("Kopyala") : ("Duplicate");
                                         clicked => { root.duplicate-design(); }
                                     }
                                     Button {
-                                        text: "Delete design";
+                                        text: root.language == 1 ? ("Tasarımı sil") : ("Delete design");
                                         clicked => { root.delete-design(); }
                                     }
                                 }
@@ -729,7 +737,7 @@ export component AppWindow inherits Window {
                                             wta := TouchArea { clicked => { root.widget-selected(i); } }
                                         }
                                         if root.widget-names.length == 0: Text {
-                                            text: "No widgets yet. Add one above.";
+                                            text: root.language == 1 ? ("Henüz bileşen yok. Yukarıdan ekleyebilirsin.") : ("No widgets yet. Add one above.");
                                             opacity: 0.6;
                                             font-size: 12px;
                                             color: Palette.foreground;
@@ -746,16 +754,28 @@ export component AppWindow inherits Window {
                                         color: Palette.foreground;
                                     }
                                     if root.w-uses-stat: SettingRow {
-                                        label: "Stat";
+                                        label: root.language == 1 ? "Sensör" : "Sensor";
+                                        hint: root.language == 1 ? "Fan/pompa (RPM), sıcaklık, güç, voltaj, frekans ve daha fazlası. Türe göre sıralanır." : "Fan/pump (RPM), temperature, power, voltage, clocks and more. Sorted by type.";
                                         ComboBox {
-                                            width: 200px;
-                                            model: ["CPU temperature", "CPU load", "GPU temperature", "GPU load"];
+                                            width: 320px;
+                                            model: root.widget-sensor-choices;
                                             current-index <=> root.w-stat;
                                             selected => { root.widget-changed(); }
                                         }
                                     }
+                                    if root.w-uses-stat: SettingRow {
+                                        label: root.language == 1 ? "Gösterge üst sınırı" : "Gauge maximum";
+                                        hint: root.language == 1 ? "Doğrudan sensör halkaları/çubukları için (RPM, W, V, MHz vb.)." : "Only for direct sensor rings/bars (RPM, W, V, MHz etc.).";
+                                        Slider {
+                                            width: 220px;
+                                            minimum: 1;
+                                            maximum: 10000;
+                                            value <=> root.w-sensor-max;
+                                            changed => { root.widget-changed(); }
+                                        }
+                                    }
                                     if root.w-is-label: SettingRow {
-                                        label: "Text";
+                                        label: root.language == 1 ? "Metin" : "Text";
                                         LineEdit {
                                             width: 240px;
                                             text <=> root.w-text;
@@ -774,7 +794,7 @@ export component AppWindow inherits Window {
                                         }
                                     }
                                     if root.w-has-thickness: SettingRow {
-                                        label: "Thickness";
+                                        label: root.language == 1 ? "Kalınlık" : "Thickness";
                                         hint: Math.round(root.w-thickness) + " px";
                                         Slider {
                                             width: 220px;
@@ -785,8 +805,8 @@ export component AppWindow inherits Window {
                                         }
                                     }
                                     SettingRow {
-                                        label: "Position";
-                                        hint: "x " + Math.round(root.w-x) + ", y " + Math.round(root.w-y) + "  (or drag in the preview)";
+                                        label: root.language == 1 ? "Konum" : "Position";
+                                        hint: "x " + Math.round(root.w-x) + ", y " + Math.round(root.w-y) + (root.language == 1 ? " (veya önizlemede sürükle)" : " (or drag in the preview)");
                                         HorizontalLayout {
                                             spacing: 8px;
                                             Slider {
@@ -806,22 +826,22 @@ export component AppWindow inherits Window {
                                         }
                                     }
                                     if root.w-is-text: SettingRow {
-                                        label: "Bold";
+                                        label: root.language == 1 ? "Kalın yazı" : "Bold";
                                         Switch {
                                             checked <=> root.w-bold;
                                             toggled => { root.widget-changed(); }
                                         }
                                     }
                                     SettingRow {
-                                        label: "Use design colours";
-                                        hint: "Text colour for text; temperature or accent colour for gauges.";
+                                        label: root.language == 1 ? "Tasarım renklerini kullan" : "Use design colours";
+                                        hint: root.language == 1 ? "Metinler için yazı rengi; göstergeler için sıcaklık veya vurgu rengi." : "Text colour for text; temperature or accent colour for gauges.";
                                         Switch {
                                             checked <=> root.w-auto;
                                             toggled => { root.widget-changed(); }
                                         }
                                     }
                                     if !root.w-auto: SettingRow {
-                                        label: "Colour";
+                                        label: root.language == 1 ? "Renk" : "Color";
                                         Swatches {
                                             colors: root.swatches;
                                             selected <=> root.w-color-index;
@@ -832,15 +852,15 @@ export component AppWindow inherits Window {
                                         spacing: 8px;
                                         alignment: start;
                                         Button {
-                                            text: "Bring forward";
+                                            text: root.language == 1 ? ("Öne getir") : ("Bring forward");
                                             clicked => { root.move-widget(1); }
                                         }
                                         Button {
-                                            text: "Send backward";
+                                            text: root.language == 1 ? ("Arkaya gönder") : ("Send backward");
                                             clicked => { root.move-widget(-1); }
                                         }
                                         Button {
-                                            text: "Delete widget";
+                                            text: root.language == 1 ? ("Bileşeni sil") : ("Delete widget");
                                             clicked => { root.delete-widget(); }
                                         }
                                     }
@@ -850,23 +870,23 @@ export component AppWindow inherits Window {
                             if root.design == 0: VerticalLayout {
                                 spacing: 12px;
                                 SettingRow {
-                                    label: "Load rings";
-                                    hint: "Thin inner rings for CPU and GPU load.";
+                                    label: root.language == 1 ? "Yük halkaları" : "Load rings";
+                                    hint: root.language == 1 ? "CPU ve GPU kullanımı için ince iç halkalar." : "Thin inner rings for CPU and GPU load.";
                                     Switch {
                                         checked <=> root.g-load-rings;
                                         toggled => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Labels";
-                                    hint: "CPU / GPU titles and load text.";
+                                    label: root.language == 1 ? "Etiketler" : "Labels";
+                                    hint: root.language == 1 ? "CPU/GPU başlıkları ve kullanım metinleri." : "CPU / GPU titles and load text.";
                                     Switch {
                                         checked <=> root.g-labels;
                                         toggled => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Ring thickness";
+                                    label: root.language == 1 ? "Halka kalınlığı" : "Ring thickness";
                                     hint: Math.round(root.g-thickness) + " px";
                                     Slider {
                                         width: 220px;
@@ -881,58 +901,58 @@ export component AppWindow inherits Window {
                             if root.design == 1: VerticalLayout {
                                 spacing: 12px;
                                 SettingRow {
-                                    label: "Tiles";
+                                    label: root.language == 1 ? "Kutucuklar" : "Tiles";
                                     HorizontalLayout {
                                         spacing: 12px;
                                         CheckBox {
-                                            text: "CPU temp";
+                                            text: root.language == 1 ? ("CPU sıcaklığı") : ("CPU temp");
                                             checked <=> root.t-cpu-temp;
                                             toggled => { root.settings-changed(); }
                                         }
                                         CheckBox {
-                                            text: "CPU load";
+                                            text: root.language == 1 ? ("CPU kullanımı") : ("CPU load");
                                             checked <=> root.t-cpu-load;
                                             toggled => { root.settings-changed(); }
                                         }
                                         CheckBox {
-                                            text: "GPU temp";
+                                            text: root.language == 1 ? ("GPU sıcaklığı") : ("GPU temp");
                                             checked <=> root.t-gpu-temp;
                                             toggled => { root.settings-changed(); }
                                         }
                                         CheckBox {
-                                            text: "GPU load";
+                                            text: root.language == 1 ? ("GPU kullanımı") : ("GPU load");
                                             checked <=> root.t-gpu-load;
                                             toggled => { root.settings-changed(); }
                                         }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Layout";
+                                    label: root.language == 1 ? "Yerleşim" : "Layout";
                                     ComboBox {
                                         width: 160px;
-                                        model: ["One column", "Two columns"];
+                                        model: root.language == 1 ? ["Tek sütun", "İki sütun"] : ["One column", "Two columns"];
                                         current-index <=> root.t-columns;
                                         selected => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Position";
+                                    label: root.language == 1 ? "Konum" : "Position";
                                     ComboBox {
                                         width: 160px;
-                                        model: ["Top", "Center", "Bottom"];
+                                        model: root.language == 1 ? ["Üst", "Orta", "Alt"] : ["Top", "Center", "Bottom"];
                                         current-index <=> root.t-position;
                                         selected => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Panels behind tiles";
+                                    label: root.language == 1 ? "Kutucukların arkasında paneller" : "Panels behind tiles";
                                     Switch {
                                         checked <=> root.t-panel;
                                         toggled => { root.settings-changed(); }
                                     }
                                 }
                                 if root.t-panel: SettingRow {
-                                    label: "Panel opacity";
+                                    label: root.language == 1 ? "Panel saydamlığı" : "Panel opacity";
                                     hint: Math.round(root.t-panel-opacity) + "%";
                                     Slider {
                                         width: 220px;
@@ -947,31 +967,31 @@ export component AppWindow inherits Window {
                             if root.design == 2: VerticalLayout {
                                 spacing: 12px;
                                 SettingRow {
-                                    label: "Stat to show";
+                                    label: root.language == 1 ? "Gösterilecek değer" : "Stat to show";
                                     ComboBox {
                                         width: 200px;
-                                        model: ["CPU temperature", "CPU load", "GPU temperature", "GPU load"];
+                                        model: root.language == 1 ? (["CPU sıcaklığı", "CPU kullanımı", "GPU sıcaklığı", "GPU kullanımı"]) : (["CPU temperature", "CPU load", "GPU temperature", "GPU load"]);
                                         current-index <=> root.b-stat;
                                         selected => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Progress ring";
+                                    label: root.language == 1 ? "İlerleme halkası" : "Progress ring";
                                     Switch {
                                         checked <=> root.b-ring;
                                         toggled => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Tick marks";
+                                    label: root.language == 1 ? "İşaret çizgileri" : "Tick marks";
                                     Switch {
                                         checked <=> root.b-ticks;
                                         toggled => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Second line";
-                                    hint: "Shows the related load or temperature underneath.";
+                                    label: root.language == 1 ? "İkinci satır" : "Second line";
+                                    hint: root.language == 1 ? "İlgili kullanım veya sıcaklık değerini altında gösterir." : "Shows the related load or temperature underneath.";
                                     Switch {
                                         checked <=> root.b-secondary;
                                         toggled => { root.settings-changed(); }
@@ -982,32 +1002,32 @@ export component AppWindow inherits Window {
                             if root.design == 3: VerticalLayout {
                                 spacing: 12px;
                                 SettingRow {
-                                    label: "24-hour clock";
-                                    hint: "Off shows AM/PM.";
+                                    label: root.language == 1 ? "24 saatlik saat" : "24-hour clock";
+                                    hint: root.language == 1 ? "Kapatıldığında AM/PM gösterilir." : "Off shows AM/PM.";
                                     Switch {
                                         checked <=> root.c-h24;
                                         toggled => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Seconds ring";
+                                    label: root.language == 1 ? "Saniye halkası" : "Seconds ring";
                                     Switch {
                                         checked <=> root.c-seconds;
                                         toggled => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Date";
+                                    label: root.language == 1 ? "Tarih" : "Date";
                                     Switch {
                                         checked <=> root.c-date;
                                         toggled => { root.settings-changed(); }
                                     }
                                 }
                                 SettingRow {
-                                    label: "Stats under the clock";
+                                    label: root.language == 1 ? "Saatin altında istatistikler" : "Stats under the clock";
                                     ComboBox {
                                         width: 200px;
-                                        model: ["Temperatures", "Loads", "None"];
+                                        model: root.language == 1 ? ["Sıcaklıklar", "Kullanım oranları", "Yok"] : ["Temperatures", "Loads", "None"];
                                         current-index <=> root.c-stats;
                                         selected => { root.settings-changed(); }
                                     }
@@ -1016,19 +1036,19 @@ export component AppWindow inherits Window {
                         }
 
                         Card {
-                            title: "Style";
-                            subtitle: "Text and colours of " + root.design-names[root.design] + ".";
+                            title: root.language == 1 ? ("Görünüm") : ("Style");
+                            subtitle: root.language == 1 ? ("Metin ve renkler: " + root.design-names[root.design] + ".") : ("Text and colours of " + root.design-names[root.design] + ".");
                             SettingRow {
-                                label: "Font";
+                                label: root.language == 1 ? "Yazı tipi" : "Font";
                                 ComboBox {
                                     width: 200px;
-                                    model: ["Segoe UI", "Bahnschrift", "Arial", "Consolas"];
+                                    model: ["Segoe UI", "Bahnschrift", "Arial", "Consolas", "Google Sans", "Google Sans Flex", "Inter", "Rajdhani", "Orbitron", "JetBrains Mono", "Roboto Condensed", "Oswald"];
                                     current-index <=> root.font-index;
                                     selected => { root.settings-changed(); }
                                 }
                             }
                             SettingRow {
-                                label: "Text size";
+                                label: root.language == 1 ? "Yazı boyutu" : "Text size";
                                 hint: Math.round(root.text-scale) + "%";
                                 Slider {
                                     width: 220px;
@@ -1039,8 +1059,8 @@ export component AppWindow inherits Window {
                                 }
                             }
                             SettingRow {
-                                label: "Text outline";
-                                hint: "A dark edge so text reads well on bright backgrounds.";
+                                label: root.language == 1 ? "Metin kenarlığı" : "Text outline";
+                                hint: root.language == 1 ? "Açık renkli arka planlarda okunabilirlik için koyu metin kenarlığı." : "A dark edge so text reads well on bright backgrounds.";
                                 Switch {
                                     checked <=> root.outline;
                                     toggled => { root.settings-changed(); }
@@ -1048,7 +1068,7 @@ export component AppWindow inherits Window {
                             }
                             Divider { }
                             SettingRow {
-                                label: "Text colour";
+                                label: root.language == 1 ? "Metin rengi" : "Text colour";
                                 Swatches {
                                     colors: root.swatches;
                                     selected <=> root.text-color-index;
@@ -1056,8 +1076,8 @@ export component AppWindow inherits Window {
                                 }
                             }
                             SettingRow {
-                                label: "Accent colour";
-                                hint: "Rings, bars and highlights.";
+                                label: root.language == 1 ? "Vurgu rengi" : "Accent colour";
+                                hint: root.language == 1 ? "Halkalar, çubuklar ve vurgular." : "Rings, bars and highlights.";
                                 Swatches {
                                     colors: root.swatches;
                                     selected <=> root.accent-index;
@@ -1065,15 +1085,15 @@ export component AppWindow inherits Window {
                                 }
                             }
                             SettingRow {
-                                label: "Colour temperatures";
-                                hint: "Blue when cool through green and amber to red when hot.";
+                                label: root.language == 1 ? "Sıcaklıklara göre renklendir" : "Colour temperatures";
+                                hint: root.language == 1 ? "Soğukken mavi, ardından yeşil ve sarı; sıcakken kırmızı." : "Blue when cool through green and amber to red when hot.";
                                 Switch {
                                     checked <=> root.temp-colors;
                                     toggled => { root.settings-changed(); }
                                 }
                             }
                             SettingRow {
-                                label: "Darken background";
+                                label: root.language == 1 ? "Arka planı karart" : "Darken background";
                                 hint: Math.round(root.dim) + "%";
                                 Slider {
                                     width: 220px;
@@ -1093,16 +1113,31 @@ export component AppWindow inherits Window {
                     alignment: start;
                     spacing: 16px;
                     Card {
-                        title: "Preview";
+                        title: root.language == 1 ? ("Önizleme") : ("Preview");
                         subtitle: root.design >= 4 && root.page == 1 && root.stats-enabled
-                            ? "Click a widget to select it, drag to move it."
-                            : root.preview-live ? "Live values from the service." : "Sample values until sensors report.";
+                            ? (root.language == 1 ? "Seçmek için bileşene tıkla, taşımak için sürükle." : "Click a widget to select it, drag to move it.")
+                            : root.preview-live ? (root.language == 1 ? "Hizmetten gelen canlı değerler." : "Live values from the service.") : (root.language == 1 ? "Sensörlerden veri gelene kadar örnek değerler." : "Sample values until sensors report.");
+                        HorizontalLayout {
+                            spacing: 10px;
+                            alignment: center;
+                            Text {
+                                text: root.language == 1 ? "Ekran şekli:" : "Screen shape:";
+                                color: Palette.foreground;
+                                vertical-alignment: center;
+                            }
+                            ComboBox {
+                                width: 145px;
+                                model: root.language == 1 ? ["Kare", "Yuvarlak"] : ["Square", "Round"];
+                                current-index <=> root.preview-shape;
+                                selected => { root.preview-shape-changed(self.current-index); }
+                            }
+                        }
                         HorizontalLayout {
                             alignment: center;
                             Rectangle {
                                 width: 300px;
                                 height: 300px;
-                                border-radius: 150px;
+                                border-radius: root.preview-shape == 1 ? 150px : 0px;
                                 clip: true;
                                 background: #000000;
                                 Image {
@@ -1138,17 +1173,17 @@ export component AppWindow inherits Window {
                             }
                             InfoLine {
                                 glyph: "\u{E790}";
-                                text: root.stats-enabled ? root.design-names[root.design] : "No stats";
+                                text: root.language == 1 ? (root.stats-enabled ? root.design-names[root.design] : "İstatistik yok") : (root.stats-enabled ? root.design-names[root.design] : "No stats");
                             }
                         }
                     }
                     if !root.sensors-ok: InfoBar {
                         warning: true;
-                        text: "No sensor data yet. See the Sensors page.";
+                        text: root.language == 1 ? ("Henüz sensör verisi yok. Sensörler sayfasını kontrol et.") : ("No sensor data yet. See the Sensors page.");
                     }
                     if root.official-running: InfoBar {
                         warning: true;
-                        text: "The official Monster app is running. Close it so it doesn't fight over the screen.";
+                        text: root.language == 1 ? ("Resmî Monster uygulaması açık. Ekran çakışmasını önlemek için kapat.") : ("The official Monster app is running. Close it so it doesn't fight over the screen.");
                     }
                 }
             }
@@ -1162,11 +1197,11 @@ export component AppWindow inherits Window {
                     spacing: 16px;
                     alignment: start;
                     PageHeader {
-                        title: "Sensors";
-                        subtitle: "Where each stat comes from. Auto picks the CPU package temperature and your discrete GPU.";
+                        title: root.language == 1 ? ("Sensörler") : ("Sensors");
+                        subtitle: root.language == 1 ? ("Değerlerin alındığı kaynaklar. Otomatik seçim CPU paket sıcaklığını ve haricî GPU'yu kullanır.") : ("Where each stat comes from. Auto picks the CPU package temperature and your discrete GPU.");
                     }
                     Card {
-                        title: "Stats";
+                        title: root.language == 1 ? ("İstatistikler") : ("Stats");
                         for row[i] in root.stat-rows: VerticalLayout {
                             spacing: 10px;
                             if i > 0: Divider { }
@@ -1198,8 +1233,8 @@ export component AppWindow inherits Window {
                         }
                     }
                     Card {
-                        title: "Sources";
-                        subtitle: "CPU temperature and load and NVIDIA GPUs are read directly. HWiNFO or LibreHardwareMonitor can add more sensors.";
+                        title: root.language == 1 ? ("Kaynaklar") : ("Sources");
+                        subtitle: root.language == 1 ? ("CPU sıcaklığı ve kullanımı doğrudan okunur. Dahili LHM ek donanım sensörlerini sağlar; HWiNFO ve harici LibreHardwareMonitor isteğe bağlıdır.") : ("CPU temperature and load are read directly. Internal LHM provides additional hardware sensors; HWiNFO and external LibreHardwareMonitor remain optional.");
                         Text {
                             text: root.sensors-state;
                             color: Palette.foreground;
@@ -1208,7 +1243,7 @@ export component AppWindow inherits Window {
                         }
                         Divider { }
                         Text {
-                            text: "Optional extra sources, for other GPUs or more sensors:\nHWiNFO: open Settings, enable \"Shared Memory Support\" and keep HWiNFO running. The free version turns this off after 12 hours.\nLibreHardwareMonitor: run it as administrator and enable Options > Remote Web Server > Run.";
+                            text: root.language == 1 ? ("Dahili LHM: Kurulum paketiyle birlikte gelir; ayrı LibreHardwareMonitor uygulaması veya web sunucusu gerekmez. Bazı donanımlar desteklenmeyebilir.\nİsteğe bağlı alternatifler:\nHWiNFO: Ayarlardan \"Shared Memory Support\" seçeneğini açıp HWiNFO uygulamasını çalışır bırak. Ücretsiz sürümde bu özellik 12 saat sonra kapanır.\nHarici LibreHardwareMonitor: yönetici olarak aç ve Options > Remote Web Server > Run seçeneğini etkinleştir. Aşağıdaki port ayarını kullan.") : ("Internal LHM: bundled with the installer; no separate LibreHardwareMonitor app or web server needed. Some hardware may be unsupported.\nOptional alternatives:\nHWiNFO: open Settings, enable \"Shared Memory Support\" and keep HWiNFO running. The free version turns this off after 12 hours.\nExternal LibreHardwareMonitor: run as administrator and enable Options > Remote Web Server > Run. Configure the port below.");
                             color: Palette.foreground;
                             opacity: 0.75;
                             font-size: 12px;
@@ -1218,16 +1253,16 @@ export component AppWindow inherits Window {
                             spacing: 8px;
                             alignment: start;
                             Button {
-                                text: "Get HWiNFO";
+                                text: root.language == 1 ? ("HWiNFO indir") : ("Get HWiNFO");
                                 clicked => { root.open-url("https://www.hwinfo.com/download/"); }
                             }
                             Button {
-                                text: "Get LibreHardwareMonitor";
+                                text: root.language == 1 ? ("LibreHardwareMonitor indir") : ("Get LibreHardwareMonitor");
                                 clicked => { root.open-url("https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases"); }
                             }
                         }
                         SettingRow {
-                            label: "LibreHardwareMonitor web server port";
+                            label: root.language == 1 ? "Harici LibreHardwareMonitor web sunucusu portu" : "External LibreHardwareMonitor web server port";
                             LineEdit {
                                 width: 100px;
                                 text <=> root.lhm-port;
@@ -1247,16 +1282,30 @@ export component AppWindow inherits Window {
                     padding: 28px;
                     spacing: 16px;
                     alignment: start;
-                    PageHeader { title: "Settings"; }
+                    PageHeader { title: root.language == 1 ? "Ayarlar" : "Settings"; }
+                    Card {
+                        title: root.language == 1 ? "Dil / Language" : "Language / Dil";
+                        subtitle: root.language == 1 ? "Arayüz dilini seçin. Seçiminiz kaydedilir." : "Choose the interface language. Your choice is saved.";
+                        SettingRow {
+                            label: root.language == 1 ? "Arayüz dili" : "Interface language";
+                            ComboBox {
+                                width: 220px;
+                                model: ["English", "Türkçe"];
+                                current-index <=> root.language;
+                                selected => { root.language-changed(self.current-index); }
+                            }
+                        }
+                    }
+
                     if root.official-running: InfoBar {
                         warning: true;
-                        text: "The official Monster app is running. Close it so it doesn't fight over the screen.";
+                        text: root.language == 1 ? ("Resmî Monster uygulaması açık. Ekran çakışmasını önlemek için kapat.") : ("The official Monster app is running. Close it so it doesn't fight over the screen.");
                     }
                     Card {
-                        title: "Background service";
-                        subtitle: "Starts with Windows, talks to the cooler and keeps the screen awake.";
+                        title: root.language == 1 ? ("Arka plan hizmeti") : ("Background service");
+                        subtitle: root.language == 1 ? ("Windows ile başlar, soğutucuyla iletişim kurar ve ekranı açık tutar.") : ("Starts with Windows, talks to the cooler and keeps the screen awake.");
                         SettingRow {
-                            label: "Status";
+                            label: root.language == 1 ? "Durum" : "Status";
                             Text {
                                 text: root.service-state;
                                 color: root.service-running ? #22c55e : #f59e0b;
@@ -1265,36 +1314,36 @@ export component AppWindow inherits Window {
                             }
                         }
                         SettingRow {
-                            label: "Cooler";
+                            label: root.language == 1 ? "Soğutucu" : "Cooler";
                             Text {
                                 text: root.cooler-state;
                                 color: Palette.foreground;
                                 vertical-alignment: center;
                             }
                         }
-                        if root.last-error != "": InfoBar { text: "Last error: " + root.last-error; }
+                        if root.last-error != "": InfoBar { text: (root.language == 1 ? "Son hata: " : "Last error: ") + root.last-error; }
                         HorizontalLayout {
                             spacing: 8px;
                             alignment: start;
                             Button {
-                                text: "Restart service";
+                                text: root.language == 1 ? ("Hizmeti yeniden başlat") : ("Restart service");
                                 clicked => { root.repair-service(); }
                             }
                             Button {
-                                text: "Open log";
+                                text: root.language == 1 ? ("Günlüğü aç") : ("Open log");
                                 clicked => { root.open-log(); }
                             }
                             Button {
-                                text: "Open data folder";
+                                text: root.language == 1 ? ("Veri klasörünü aç") : ("Open data folder");
                                 clicked => { root.open-data-folder(); }
                             }
                         }
                     }
                     Card {
-                        title: "Startup";
+                        title: root.language == 1 ? ("Başlangıç") : ("Startup");
                         SettingRow {
-                            label: "Start with Windows";
-                            hint: "Puts your design on the cooler right after boot, before you sign in. Changing it asks for admin rights.";
+                            label: root.language == 1 ? "Windows ile başlat" : "Start with Windows";
+                            hint: root.language == 1 ? ("Tasarımını oturum açmadan önce ekrana uygular. Değişiklik yönetici izni ister.") : ("Puts your design on the cooler right after boot, before you sign in. Changing it asks for admin rights.");
                             HorizontalLayout {
                                 spacing: 10px;
                                 if root.autostart-busy: Spinner {
@@ -1311,16 +1360,16 @@ export component AppWindow inherits Window {
                         }
                         Divider { }
                         SettingRow {
-                            label: "Show icon in the system tray";
-                            hint: "Closing the window keeps the app in the tray. Turn off to quit when the window closes.";
+                            label: root.language == 1 ? "Sistem tepsisinde simge göster" : "Show icon in system tray";
+                            hint: root.language == 1 ? ("Pencere kapansa da uygulama tepside çalışır. Pencere kapatılınca çıkmak için devre dışı bırak.") : ("Closing the window keeps the app in the tray. Turn off to quit when the window closes.");
                             Switch {
                                 checked <=> root.show-tray;
                                 toggled => { root.show-tray-toggled(self.checked); }
                             }
                         }
                         SettingRow {
-                            label: "Open in the tray when I sign in";
-                            hint: root.show-tray ? "Only the tray icon appears; click it to open this window." : "Needs the tray icon.";
+                            label: root.language == 1 ? "Oturum açınca tepside başlat" : "Open in tray at login";
+                            hint: root.language == 1 ? (root.show-tray ? "Yalnızca tepsi simgesi görünür; pencereyi açmak için tıkla." : "Tepsi simgesi gerekli.") : (root.show-tray ? "Only the tray icon appears; click it to open this window." : "Needs the tray icon.");
                             Switch {
                                 enabled: root.show-tray;
                                 checked <=> root.login-tray;
@@ -1329,8 +1378,8 @@ export component AppWindow inherits Window {
                         }
                     }
                     Card {
-                        title: "Video support";
-                        subtitle: "ffmpeg is needed only for video and GIF backgrounds. It's kept private to this app and doesn't change PATH.";
+                        title: root.language == 1 ? ("Video desteği") : ("Video support");
+                        subtitle: root.language == 1 ? ("ffmpeg yalnızca video ve GIF arka planları için gerekir; sistem PATH ayarını değiştirmez.") : ("ffmpeg is needed only for video and GIF backgrounds. It's kept private to this app and doesn't change PATH.");
                         SettingRow {
                             label: "ffmpeg";
                             Text {
@@ -1348,20 +1397,20 @@ export component AppWindow inherits Window {
                         if !root.ffmpeg-ok && !root.ffmpeg-busy: HorizontalLayout {
                             alignment: start;
                             Button {
-                                text: "Download ffmpeg (about 90 MB)";
+                                text: root.language == 1 ? ("ffmpeg indir (yaklaşık 90 MB)") : ("Download ffmpeg (about 90 MB)");
                                 primary: true;
                                 clicked => { root.download-ffmpeg(); }
                             }
                         }
                     }
                     Card {
-                        title: "About";
-                        subtitle: "AIO Cooler Screen " + root.version + ". Not affiliated with Monster.";
+                        title: root.language == 1 ? ("Hakkında") : ("About");
+                        subtitle: root.language == 1 ? ("AIO Cooler Screen " + root.version + ". Monster ile bağlantılı değildir.") : ("AIO Cooler Screen " + root.version + ". Not affiliated with Monster.");
                         Text {
                             wrap: word-wrap;
                             color: Palette.foreground;
                             font-size: 13px;
-                            text: "Backgrounds and live stats for the Monster AIO Cooler LCD. CPU temperatures are read through the open-source PawnIO driver, CPU load from Windows and NVIDIA GPUs through the driver's NVML; HWiNFO and LibreHardwareMonitor can add more. Videos are converted with ffmpeg. See THIRD-PARTY-NOTICES.md in the install folder.";
+                            text: root.language == 1 ? ("Monster AIO Cooler LCD için arka planlar ve canlı istatistikler. CPU sıcaklığı açık kaynak PawnIO sürücüsünden, CPU kullanımı Windows'tan ve NVIDIA GPU değerleri NVML üzerinden okunur. Dahili LHM ek sensörleri ayrı web sunucusu olmadan okur; HWiNFO ve harici LibreHardwareMonitor alternatif olarak desteklenir. Videolar ffmpeg ile dönüştürülür. Ayrıntılar kurulum klasöründeki THIRD-PARTY-NOTICES.md dosyasında.") : ("Backgrounds and live stats for the Monster AIO Cooler LCD. CPU temperatures are read through the open-source PawnIO driver, CPU load from Windows and NVIDIA GPUs through the driver's NVML; Internal LHM reads additional sensors without a separate web server; HWiNFO and external LibreHardwareMonitor remain supported alternatives. Videos are converted with ffmpeg. See THIRD-PARTY-NOTICES.md in the install folder.");
                         }
                         HorizontalLayout {
                             alignment: start;

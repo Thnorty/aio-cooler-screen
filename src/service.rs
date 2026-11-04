@@ -99,7 +99,7 @@ fn spawn_sensor_thread(state: Arc<Mutex<SensorState>>, stop: Arc<AtomicBool>, lh
     std::thread::spawn(move || {
         let mut hub = SensorHub::default();
         while !stop.load(Ordering::Relaxed) {
-            let (readings, summary) = hub.read(lhm_port.load(Ordering::Relaxed), &[READING_TEMP, READING_USAGE]);
+            let (readings, summary) = hub.read(lhm_port.load(Ordering::Relaxed), &[]);
             if let Ok(mut s) = state.lock() {
                 *s = SensorState { readings, summary };
             }

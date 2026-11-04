@@ -35,7 +35,7 @@ const SWATCHES: [[u8; 3]; 8] = [
 const FITS: [Fit; 3] = [Fit::Cover, Fit::Contain, Fit::Stretch];
 const POSITIONS: [Position; 3] = [Position::Top, Position::Center, Position::Bottom];
 const CLOCK_STATS: [ClockStats; 3] = [ClockStats::Temps, ClockStats::Loads, ClockStats::None];
-/// Displayed size of the round preview, in logical pixels (the canvas is 480).
+/// Displayed size of the LCD preview, in logical pixels (the canvas is 480).
 const PREVIEW_PX: f32 = 300.0;
 
 /// Backgrounds shipped with the app (made with tools/make-backgrounds.ps1).
@@ -173,9 +173,9 @@ fn show_window(ui: AppWindow) {
 /// Create or remove the tray icon, and reflect it in the Settings controls.
 fn set_tray(ui: &AppWindow, s: &mut State, on: bool) {
     if on && s.tray.is_none() {
-        match Tray::new(s.cfg.stats.enabled, s.cfg.display_off) {
+        match Tray::new(s.cfg.stats.enabled, s.cfg.display_off, s.prefs.language) {
             Ok(t) => s.tray = Some(t),
-            Err(e) => show_message(ui, false, format!("Could not create the tray icon: {e}")),
+            Err(e) => show_message(ui, false, format!("{}: {e}", if s.prefs.language == 1 { "Sistem tepsisi simgesi oluşturulamadı" } else { "Could not create the tray icon" })),
         }
     } else if !on {
         s.tray = None;
@@ -242,8 +242,8 @@ fn refresh_gallery(ui: &AppWindow, state: &State) {
     let names: Vec<SharedString> = designs
         .iter()
         .map(|d| match d {
-            Design::Custom(id) => state.cfg.stats.custom.iter().find(|c| c.id == *id).map_or("Custom".into(), |c| c.name.as_str().into()),
-            d => d.name().into(),
+            Design::Custom(id) => state.cfg.stats.custom.iter().find(|c| c.id == *id).map_or((if state.prefs.language == 1 { "Özel" } else { "Custom" }).into(), |c| c.name.as_str().into()),
+            d => (if state.prefs.language == 1 { match d { Design::Gauges => "Halka göstergeleri", Design::Tiles => "Gösterge panosu", Design::BigStat => "Büyük istatistik", Design::Clock => "Saat ve istatistikler", Design::Custom(_) => "Özel" } } else { d.name() }).into(),
         })
         .collect();
     ui.set_design_names(ModelRc::new(VecModel::from(names)));
@@ -323,19 +323,23 @@ fn builtin_index(cfg: &Config) -> i32 {
     BACKGROUNDS.iter().position(|(n, _)| format!("{n}{BUILTIN_SUFFIX}") == src).map_or(-1, |i| i as i32)
 }
 
-fn media_label(cfg: &Config) -> String {
+fn media_label(cfg: &Config, lang: i32) -> String {
     match (&cfg.media_source, &cfg.media_file) {
         (Some(src), _) => format!("{src}{}", if cfg.media_is_video { " (video)" } else { "" }),
-        (None, Some(_)) => if cfg.media_is_video { "Your video" } else { "Your image" }.into(),
-        (None, None) => "No background set".into(),
+        (None, Some(_)) => (if cfg.media_is_video { if lang == 1 { "Videon" } else { "Your video" } } else if lang == 1 { "Görselin" } else { "Your image" }).into(),
+        (None, None) => (if lang == 1 { "Arka plan ayarlanmadı" } else { "No background set" }).into(),
     }
 }
 
 fn init_ui(ui: &AppWindow, state: &State) {
     ui.set_app_icon(to_image(&icon::render(64)));
     ui.set_version(env!("CARGO_PKG_VERSION").into());
+    ui.set_language(state.prefs.language.clamp(0, 1));
+    ui.set_preview_shape(state.prefs.preview_shape.clamp(0, 1));
     ui.set_display_off(state.cfg.display_off);
-    let kinds: Vec<SharedString> = WidgetKind::ALL.iter().map(|k| k.name().into()).collect();
+    let kinds: Vec<SharedString> = WidgetKind::ALL.iter().map(|k| {
+        let name = localized_widget_kind(*k, state.prefs.language); name.into()
+    }).collect();
     ui.set_widget_kinds(ModelRc::new(VecModel::from(kinds)));
     let bg_thumbs: Vec<Image> = BACKGROUNDS
         .iter()
@@ -350,10 +354,10 @@ fn init_ui(ui: &AppWindow, state: &State) {
     let swatches: Vec<slint::Color> = SWATCHES.iter().map(|c| slint::Color::from_rgb_u8(c[0], c[1], c[2])).collect();
     ui.set_swatches(ModelRc::new(VecModel::from(swatches)));
     ui.set_stat_rows(ModelRc::from(state.rows.clone()));
-    ui.set_media_name(media_label(&state.cfg).into());
+    ui.set_media_name(media_label(&state.cfg, state.prefs.language).into());
     ui.set_lhm_port(state.cfg.effective_lhm_port().to_string().into());
     ui.set_autostart(service::query_autostart().unwrap_or(false));
-    ui.set_ffmpeg_state("Checking…".into());
+    ui.set_ffmpeg_state((if state.prefs.language == 1 { "Kontrol ediliyor…" } else { "Checking…" }).into());
     load_design_into_ui(ui, &state.cfg);
     refresh_preview(ui, state);
 }
@@ -406,19 +410,45 @@ fn load_design_into_ui(ui: &AppWindow, cfg: &Config) {
 }
 
 /// Which widget properties the editor shows for each kind, and the size slider's range.
-fn size_range(kind: WidgetKind) -> (&'static str, f32, f32) {
+fn size_range(kind: WidgetKind, lang: i32) -> (&'static str, f32, f32) {
     match kind {
-        WidgetKind::Ring => ("Radius", 20.0, 235.0),
-        WidgetKind::Bar => ("Width", 20.0, 460.0),
-        _ => ("Text size", 10.0, 220.0),
+        WidgetKind::Ring => (if lang == 1 { "Yarıçap" } else { "Radius" }, 20.0, 235.0),
+        WidgetKind::Bar => (if lang == 1 { "Genişlik" } else { "Width" }, 20.0, 460.0),
+        _ => (if lang == 1 { "Metin boyutu" } else { "Text size" }, 10.0, 220.0),
     }
 }
 
-fn widget_label(w: &Widget) -> String {
+fn localized_widget_kind(kind: WidgetKind, lang: i32) -> &'static str {
+    if lang != 1 { return kind.name(); }
+    match kind {
+        WidgetKind::Value => "İstatistik değeri",
+        WidgetKind::Label => "Metin",
+        WidgetKind::Ring => "Halka göstergesi",
+        WidgetKind::Bar => "İlerleme çubuğu",
+        WidgetKind::Time => "Saat",
+        WidgetKind::Date => "Tarih",
+    }
+}
+
+fn widget_label(w: &Widget, lang: i32, readings: &[Reading]) -> String {
     match w.kind {
-        WidgetKind::Label => format!("Text \"{}\"", w.text),
-        k if k.uses_stat() => format!("{}: {}", k.name(), w.stat.title()),
-        k => k.name().to_string(),
+        WidgetKind::Label => format!("{} \"{}\"", localized_widget_kind(w.kind, lang), w.text),
+        k if k.uses_stat() => {
+            let name = match w.sensor_key.as_deref() {
+                Some(key) => readings.iter()
+                    .find(|r| r.key == key)
+                    .map(friendly_sensor_label)
+                    .unwrap_or_else(|| {
+                        // The selected reading may be temporarily unavailable.
+                        // Keep its stable key intact and make the offline state explicit.
+                        let status = if lang == 1 { "Çevrimdışı" } else { "Offline" };
+                        format!("{status}: {key}")
+                    }),
+                None => w.stat.title().to_string(),
+            };
+            format!("{}: {}", localized_widget_kind(k, lang), name)
+        }
+        k => localized_widget_kind(k, lang).to_string(),
     }
 }
 
@@ -429,23 +459,41 @@ fn load_widgets_into_ui(ui: &AppWindow, state: &State) {
         ui.set_selected_widget(-1);
         return;
     };
-    let names: Vec<SharedString> = d.widgets.iter().map(|w| widget_label(w).into()).collect();
+    let names: Vec<SharedString> = d.widgets.iter().map(|w| widget_label(w, state.prefs.language, &state.readings).into()).collect();
     ui.set_widget_names(ModelRc::new(VecModel::from(names)));
     let Some((i, w)) = state.selected_widget.and_then(|i| d.widgets.get(i).map(|w| (i, w))) else {
         ui.set_selected_widget(-1);
         return;
     };
     ui.set_selected_widget(i as i32);
-    ui.set_w_kind_name(w.kind.name().into());
+    ui.set_w_kind_name(localized_widget_kind(w.kind, state.prefs.language).into());
     ui.set_w_uses_stat(w.kind.uses_stat());
     ui.set_w_is_text(w.kind.is_text());
     ui.set_w_is_label(w.kind == WidgetKind::Label);
     ui.set_w_has_thickness(matches!(w.kind, WidgetKind::Ring | WidgetKind::Bar));
-    let (label, min, max) = size_range(w.kind);
+    let (label, min, max) = size_range(w.kind, state.prefs.language);
     ui.set_w_size_label(label.into());
     ui.set_w_size_min(min);
     ui.set_w_size_max(max);
-    ui.set_w_stat(index_of(&Stat::ALL, &w.stat));
+    let mut labels: Vec<SharedString> = Stat::ALL.iter().map(|v| v.title().into()).collect();
+    let mut keys: Vec<Option<String>> = vec![None; Stat::ALL.len()];
+    // Include any currently saved sensor even when its source is temporarily offline.
+    let readings = sorted_sensor_readings(&state.readings);
+    for r in readings {
+        labels.push(friendly_sensor_label(r).into());
+        keys.push(Some(r.key.clone()));
+    }
+    if let Some(key) = &w.sensor_key {
+        if !keys.iter().any(|k| k.as_ref() == Some(key)) {
+            labels.push(format!("{}: {key}", if state.prefs.language == 1 { "Çevrimdışı" } else { "Offline" }).into());
+            keys.push(Some(key.clone()));
+        }
+    }
+    let selected = w.sensor_key.as_ref().and_then(|key| keys.iter().position(|k| k.as_ref() == Some(key)))
+        .unwrap_or_else(|| index_of(&Stat::ALL, &w.stat) as usize);
+    ui.set_widget_sensor_choices(ModelRc::new(VecModel::from(labels)));
+    ui.set_w_stat(selected as i32);
+    ui.set_w_sensor_max(w.sensor_max as f32);
     ui.set_w_text(w.text.as_str().into());
     ui.set_w_size(w.size);
     ui.set_w_thickness(w.thickness);
@@ -456,11 +504,66 @@ fn load_widgets_into_ui(ui: &AppWindow, state: &State) {
     ui.set_w_color_index(swatch_index(w.color));
 }
 
+// Friendly, category-first sensor labels. Keep Reading::key unchanged so saved designs
+// continue to resolve the same hardware readings after this display-only change.
+fn sorted_sensor_readings(readings: &[Reading]) -> Vec<&Reading> {
+    let mut result: Vec<&Reading> = readings.iter().filter(|r| r.kind > 0).collect();
+    result.sort_by(|a, b| {
+        sensor_category(a.kind).0.cmp(&sensor_category(b.kind).0)
+            .then(a.sensor.cmp(&b.sensor))
+            .then(a.name.cmp(&b.name))
+            .then(a.key.cmp(&b.key))
+    });
+    result
+}
+
+fn sensor_category(kind: i32) -> (u8, &'static str) {
+    match kind {
+        3 => (0, "Fan / pompa (RPM)"),
+        1 => (1, "Sicaklik (°C)"),
+        7 => (2, "Kullanim (%)"),
+        5 => (3, "Guc (W)"),
+        2 => (4, "Voltaj (V)"),
+        6 => (5, "Frekans (MHz)"),
+        4 => (6, "Akim (A)"),
+        _ => (7, "Diger"),
+    }
+}
+
+fn friendly_sensor_label(r: &Reading) -> String {
+    // Source prefix stays visible to distinguish identically named sensors.
+    // The complete original reading key is preserved separately, never translated.
+    let source = if r.sensor.starts_with("Internal LHM · ") { "Dahili LHM" }
+        else if r.sensor.starts_with("LHM · ") { "LHM" }
+        else if r.sensor.starts_with("HWiNFO · ") { "HWiNFO" }
+        else if r.sensor.starts_with("NVML · ") { "NVML" }
+        else { "Sensor" };
+    let hardware = r.sensor.split_once(" · ").map(|(_, v)| v).unwrap_or(&r.sensor);
+    let unit = if r.units.is_empty() { "" } else { r.units.as_str() };
+    let category = sensor_category(r.kind).1;
+    if unit.is_empty() {
+        format!("{category} | {} — {hardware} [{source}]", r.name)
+    } else {
+        format!("{category} | {} — {hardware} [{source}, {unit}]", r.name)
+    }
+}
+
 /// Copy the editor's property controls into the selected widget.
 fn read_widget(ui: &AppWindow, state: &mut State) {
     let Some(i) = state.selected_widget else { return };
+    let readings = sorted_sensor_readings(&state.readings);
     let Some(w) = state.cfg.stats.custom_design_mut().and_then(|d| d.widgets.get_mut(i)) else { return };
-    w.stat = Stat::ALL[ui.get_w_stat().clamp(0, 3) as usize];
+    let choice = ui.get_w_stat().max(0) as usize;
+    if choice < Stat::ALL.len() {
+        w.stat = Stat::ALL[choice];
+        w.sensor_key = None;
+    } else {
+        // This list is rebuilt in load_widgets_into_ui, from the same reading order.
+        if let Some(r) = readings.get(choice - Stat::ALL.len()) {
+            w.sensor_key = Some(r.key.clone());
+        }
+    }
+    w.sensor_max = (ui.get_w_sensor_max() as f64).clamp(1.0, 100000.0);
     w.text = ui.get_w_text().to_string();
     w.size = ui.get_w_size().round();
     w.thickness = ui.get_w_thickness().round();
@@ -486,7 +589,7 @@ fn read_settings(ui: &AppWindow, cfg: &mut Config) {
     if let Some(d) = s.custom_design_mut() {
         d.name = ui.get_custom_name().trim().to_string();
         if d.name.is_empty() {
-            d.name = "My design".into();
+            d.name = "Tasarımım".into();
         }
         d.h24 = ui.get_cu_h24();
     }
@@ -500,7 +603,7 @@ fn read_settings(ui: &AppWindow, cfg: &mut Config) {
     }
     look.temp_colors = ui.get_temp_colors();
     look.dim = ui.get_dim().round().clamp(0.0, 80.0) as u8;
-    look.font = FontChoice::ALL[ui.get_font_index().clamp(0, 3) as usize];
+    look.font = FontChoice::ALL[ui.get_font_index().clamp(0, (FontChoice::ALL.len() - 1) as i32) as usize];
     look.text_scale = ui.get_text_scale().round().clamp(70.0, 130.0) as u8;
     look.outline = ui.get_outline();
 
@@ -515,7 +618,7 @@ fn read_settings(ui: &AppWindow, cfg: &mut Config) {
     s.tiles.panel = ui.get_t_panel();
     s.tiles.panel_opacity = ui.get_t_panel_opacity().round().clamp(10.0, 100.0) as u8;
 
-    s.big_stat.stat = Stat::ALL[ui.get_b_stat().clamp(0, 3) as usize];
+    s.big_stat.stat = Stat::ALL[ui.get_b_stat().clamp(0, (Stat::ALL.len() - 1) as i32) as usize];
     s.big_stat.ring = ui.get_b_ring();
     s.big_stat.ticks = ui.get_b_ticks();
     s.big_stat.secondary = ui.get_b_secondary();
@@ -533,16 +636,16 @@ fn show_message(ui: &AppWindow, ok: bool, msg: impl Into<SharedString>) {
 
 fn save(ui: &AppWindow, state: &State) {
     if let Err(e) = state.cfg.save() {
-        show_message(ui, false, format!("Could not save settings: {e}"));
+        show_message(ui, false, format!("{}: {e}", if state.prefs.language == 1 { "Ayarlar kaydedilemedi" } else { "Could not save settings" }));
     }
 }
 
 fn update_ffmpeg_ui(ui: &AppWindow, state: &State) {
     ui.set_ffmpeg_ok(state.ffmpeg.is_some());
     ui.set_ffmpeg_state(match &state.ffmpeg {
-        Some(p) if p.as_os_str() == "ffmpeg" => "Found on PATH".into(),
+        Some(p) if p.as_os_str() == "ffmpeg" => (if state.prefs.language == 1 { "PATH üzerinde bulundu" } else { "Found on PATH" }).into(),
         Some(p) => format!("Found: {}", p.display()).into(),
-        None => "Not installed".into(),
+        None => (if state.prefs.language == 1 { "Kurulu değil" } else { "Not installed" }).into(),
     });
 }
 
@@ -550,6 +653,36 @@ fn update_ffmpeg_ui(ui: &AppWindow, state: &State) {
 // Callbacks
 
 fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
+    {
+        let st = state.clone();
+        ui.on_preview_shape_changed(move |shape| {
+            let mut s = st.borrow_mut();
+            s.prefs.preview_shape = shape.clamp(0, 1);
+            if let Err(e) = s.prefs.save() { eprintln!("Failed to save preview shape: {e}"); }
+        });
+    }
+    {
+        let st = state.clone();
+        let weak = ui.as_weak();
+        ui.on_language_changed(move |lang| {
+            let Some(ui) = weak.upgrade() else { return };
+            let mut s = st.borrow_mut();
+            s.prefs.language = lang.clamp(0, 1);
+            if let Err(e) = s.prefs.save() { eprintln!("Failed to save language: {e}"); }
+            if let Some(tray) = &s.tray { tray.set_language(s.prefs.language); }
+            // Force localized sensor-picker text to refresh immediately.
+            s.rows_sig.clear();
+            update_stat_rows(&mut s);
+            refresh_gallery(&ui, &s);
+            load_widgets_into_ui(&ui, &s);
+            let kinds: Vec<SharedString> = WidgetKind::ALL.iter()
+                .map(|k| localized_widget_kind(*k, s.prefs.language).into()).collect();
+            ui.set_widget_kinds(ModelRc::new(VecModel::from(kinds)));
+            update_ffmpeg_ui(&ui, &s);
+            ui.set_media_name(media_label(&s.cfg, s.prefs.language).into());
+        });
+    }
+
     let weak = ui.as_weak();
     let st = state.clone();
     ui.on_settings_changed(move || {
@@ -595,7 +728,7 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         let Some(ui) = weak.upgrade() else { return };
         let mut s = st.borrow_mut();
         let id = s.cfg.stats.custom.iter().map(|d| d.id).max().unwrap_or(0) + 1;
-        let name = format!("My design {}", s.cfg.stats.custom.len() + 1);
+        let name = format!("{} {}", if s.prefs.language == 1 { "Tasarımım" } else { "My design" }, s.cfg.stats.custom.len() + 1);
         s.cfg.stats.custom.push(CustomDesign::starter(id, name));
         s.cfg.stats.design = Design::Custom(id);
         s.cfg.stats.enabled = true;
@@ -661,7 +794,7 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         save(&ui, &s);
         // Only the list labels can change; keep the property controls as they are.
         if let Some(d) = s.cfg.stats.custom_design() {
-            let names: Vec<SharedString> = d.widgets.iter().map(|w| widget_label(w).into()).collect();
+            let names: Vec<SharedString> = d.widgets.iter().map(|w| widget_label(w, s.prefs.language, &s.readings).into()).collect();
             ui.set_widget_names(ModelRc::new(VecModel::from(names)));
         }
         refresh_preview(&ui, &s);
@@ -748,7 +881,7 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         let mut s = st.borrow_mut();
         let file = format!("media-{}.png", media::now_ms());
         if let Err(e) = std::fs::create_dir_all(config::data_dir()).and_then(|_| std::fs::write(config::data_dir().join(&file), png)) {
-            show_message(&ui, false, format!("Could not save the background: {e}"));
+            show_message(&ui, false, format!("{}: {e}", if s.prefs.language == 1 { "Arka plan kaydedilemedi" } else { "Could not save background" }));
             return;
         }
         let old = s.cfg.media_file.replace(file);
@@ -762,9 +895,9 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         if let Ok(img) = image::load_from_memory(png) {
             s.preview_bg = img.to_rgba8();
         }
-        ui.set_media_name(media_label(&s.cfg).into());
+        ui.set_media_name(media_label(&s.cfg, s.prefs.language).into());
         ui.set_bg_selected(i);
-        show_message(&ui, true, format!("{name} sent to the cooler."));
+        show_message(&ui, true, format!("{name} {}", if s.prefs.language == 1 { "soğutucuya gönderildi." } else { "sent to the cooler." }));
         refresh_preview(&ui, &s);
     });
 
@@ -773,7 +906,8 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
     ui.on_browse(move || {
         let Some(ui) = weak.upgrade() else { return };
         let exts: Vec<&str> = IMAGE_EXTENSIONS.iter().chain(VIDEO_EXTENSIONS).copied().collect();
-        let Some(p) = rfd::FileDialog::new().add_filter("Images and videos", &exts).pick_file() else { return };
+        let language = st.borrow().prefs.language;
+        let Some(p) = rfd::FileDialog::new().add_filter(if language == 1 { "Görseller ve videolar" } else { "Images and videos" }, &exts).pick_file() else { return };
         ui.set_source_path(p.display().to_string().into());
         ui.set_source_is_video(media::is_video(&p));
         let s = st.borrow();
@@ -789,13 +923,14 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
     ui.on_apply_media(move || {
         let Some(ui) = weak.upgrade() else { return };
         let src = PathBuf::from(ui.get_source_path().trim());
+        let language = st.borrow().prefs.language;
         if !src.exists() {
-            show_message(&ui, false, format!("File not found: {}", src.display()));
+            show_message(&ui, false, format!("{}: {}", if language == 1 { "Dosya bulunamadı" } else { "File not found" }, src.display()));
             return;
         }
         let fit = FITS[ui.get_fit().clamp(0, 2) as usize];
         ui.set_busy(true);
-        ui.set_busy_text(if media::is_video(&src) { "Converting video…" } else { "Preparing image…" }.into());
+        ui.set_busy_text((if media::is_video(&src) { if language == 1 { "Video dönüştürülüyor…" } else { "Converting video…" } } else if language == 1 { "Görsel hazırlanıyor…" } else { "Preparing image…" }).into());
         ui.set_message(SharedString::new());
         let name = src.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         st.borrow().spawn(move || Job::Media(prepare_into_data_dir(&src, fit), name));
@@ -806,7 +941,7 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
     ui.on_source_selected(move |i, idx| {
         let Some(ui) = weak.upgrade() else { return };
         let mut s = st.borrow_mut();
-        let i = i.clamp(0, 3) as usize;
+        let i = i.clamp(0, (Stat::ALL.len() - 1) as i32) as usize;
         let key = usize::try_from(idx - 1).ok().and_then(|k| s.row_keys.get(i)?.get(k).cloned());
         s.cfg.stats.set_source(Stat::ALL[i], key);
         save(&ui, &s);
@@ -819,8 +954,9 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
     ui.on_repair_service(move || {
         let Some(ui) = weak.upgrade() else { return };
         ui.set_busy(true);
-        ui.set_busy_text("Restarting service…".into());
-        show_message(&ui, true, "Approve the admin prompt to restart the background service.");
+        let language = st.borrow().prefs.language;
+        ui.set_busy_text((if language == 1 { "Hizmet yeniden başlatılıyor…" } else { "Restarting service…" }).into());
+        show_message(&ui, true, if language == 1 { "Arka plan hizmetini yeniden başlatmak için yönetici iznini onayla." } else { "Approve the admin prompt to restart the background service." });
         st.borrow().spawn(|| Job::ServiceRestarted(elevate("restart", &result_file("restart"))));
     });
 
@@ -844,7 +980,7 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         }
         s.prefs.show_tray = on;
         if let Err(e) = s.prefs.save() {
-            show_message(&ui, false, format!("Could not save the setting: {e}"));
+            show_message(&ui, false, format!("{}: {e}", if s.prefs.language == 1 { "Ayar kaydedilemedi" } else { "Could not save preference" }));
         }
         set_tray(&ui, &mut s, on);
     });
@@ -953,11 +1089,11 @@ fn tick(ui: &AppWindow, state: &Rc<RefCell<State>>) {
                                 if let Some(old) = old.filter(|o| Some(o) != s.cfg.media_file.as_ref()) {
                                     let _ = std::fs::remove_file(config::data_dir().join(old));
                                 }
-                                show_message(ui, true, "Sent to the cooler. It updates within a few seconds.");
+                                show_message(ui, true, if s.prefs.language == 1 { "Soğutucuya gönderildi. Birkaç saniye içinde güncellenir." } else { "Sent to the cooler. It will update in a few seconds." });
                             }
-                            Err(e) => show_message(ui, false, format!("Could not save settings: {e}")),
+                            Err(e) => show_message(ui, false, format!("{}: {e}", if s.prefs.language == 1 { "Ayarlar kaydedilemedi" } else { "Could not save settings" })),
                         }
-                        ui.set_media_name(media_label(&s.cfg).into());
+                        ui.set_media_name(media_label(&s.cfg, s.prefs.language).into());
                         ui.set_bg_selected(builtin_index(&s.cfg));
                         s.preview_bg = poster;
                         refresh_preview(ui, &s);
@@ -975,7 +1111,7 @@ fn tick(ui: &AppWindow, state: &Rc<RefCell<State>>) {
             Job::ServiceRestarted(r) => {
                 ui.set_busy(false);
                 match r {
-                    Ok(()) => show_message(ui, true, "Background service restarted."),
+                    Ok(()) => show_message(ui, true, if s.prefs.language == 1 { "Arka plan hizmeti yeniden başlatıldı." } else { "Background service restarted." }),
                     Err(e) => show_message(ui, false, e),
                 }
                 s.last_poll = Instant::now() - Duration::from_secs(10);
@@ -988,7 +1124,7 @@ fn tick(ui: &AppWindow, state: &Rc<RefCell<State>>) {
                 ui.set_ffmpeg_busy(false);
                 s.ffmpeg_progress_file = None;
                 if let Err(e) = r {
-                    show_message(ui, false, format!("ffmpeg download failed: {e}"));
+                    show_message(ui, false, format!("{}: {e}", if s.prefs.language == 1 { "ffmpeg indirme başarısız" } else { "ffmpeg download failed" }));
                 }
                 s.spawn(|| Job::FfmpegFound(ffmpeg::find()));
             }
@@ -1027,28 +1163,29 @@ fn tick(ui: &AppWindow, state: &Rc<RefCell<State>>) {
     s.live = status.as_ref().is_some_and(|st| !st.readings.is_empty());
     s.readings = status.as_ref().map(|st| st.readings.clone()).unwrap_or_default();
 
+    let lang = s.prefs.language;
     let (svc_text, running) = match state_now {
-        None => ("Not installed", false),
-        Some(ServiceState::Running) => ("Running", true),
-        Some(ServiceState::Stopped) => ("Stopped", false),
-        Some(ServiceState::StartPending) => ("Starting…", false),
-        Some(ServiceState::StopPending) => ("Stopping…", false),
-        Some(_) => ("Busy", false),
+        None => (if lang == 1 { "Kurulu değil" } else { "Not installed" }, false),
+        Some(ServiceState::Running) => (if lang == 1 { "Çalışıyor" } else { "Running" }, true),
+        Some(ServiceState::Stopped) => (if lang == 1 { "Durduruldu" } else { "Stopped" }, false),
+        Some(ServiceState::StartPending) => (if lang == 1 { "Başlatılıyor…" } else { "Starting…" }, false),
+        Some(ServiceState::StopPending) => (if lang == 1 { "Durduruluyor…" } else { "Stopping…" }, false),
+        Some(_) => (if lang == 1 { "Meşgul" } else { "Busy" }, false),
     };
     ui.set_service_state(svc_text.into());
     ui.set_service_running(running);
     match &status {
         Some(st) => {
             ui.set_cooler_ok(st.device_connected);
-            ui.set_cooler_state(if st.device_connected { "Cooler connected" } else { "Cooler not found" }.into());
+            ui.set_cooler_state(if st.device_connected { if lang == 1 { "Soğutucu bağlı" } else { "Cooler connected" } } else if lang == 1 { "Soğutucu bulunamadı" } else { "Cooler not found" }.into());
             ui.set_sensors_state(st.sensors.clone().into());
             ui.set_sensors_ok(!st.readings.is_empty());
             ui.set_last_error(st.last_error.clone().unwrap_or_default().into());
         }
         None => {
             ui.set_cooler_ok(false);
-            ui.set_cooler_state(if running { "Waiting for the service…" } else { "Service not running" }.into());
-            ui.set_sensors_state("No data from the service yet.".into());
+            ui.set_cooler_state(if running { if lang == 1 { "Hizmet bekleniyor…" } else { "Waiting for service…" } } else if lang == 1 { "Hizmet çalışmıyor" } else { "Service not running" }.into());
+            ui.set_sensors_state((if lang == 1 { "Hizmetten henüz veri alınamadı." } else { "No readings from service yet." }).into());
             ui.set_sensors_ok(true);
             ui.set_last_error(SharedString::new());
         }
@@ -1090,13 +1227,21 @@ fn fmt_value(stat: Stat, v: f64) -> String {
 /// drop-down isn't reset every second); otherwise just refresh the values.
 fn update_stat_rows(s: &mut State) {
     let mut keys = Vec::new();
-    let mut sig = String::new();
+    let mut labels = Vec::new();
+    let mut sig = format!("lang={};", s.prefs.language);
     for stat in Stat::ALL {
-        let k: Vec<String> = s.readings.iter().filter(|r| r.kind == stat.reading_kind()).map(|r| r.key.clone()).collect();
-        sig.push_str(&k.join("|"));
+        let candidates: Vec<&Reading> = sorted_sensor_readings(&s.readings)
+            .into_iter().filter(|r| r.kind == stat.reading_kind()).collect();
+        let k: Vec<String> = candidates.iter().map(|r| r.key.clone()).collect();
+        let names: Vec<String> = candidates.iter().map(|r| friendly_sensor_label(r)).collect();
+        // Include labels too, so updated hardware names refresh without changing the stored IDs.
+        for (key, name) in k.iter().zip(names.iter()) {
+            sig.push_str(&format!("{}:{}:{}:{};", key.len(), key, name.len(), name));
+        }
         sig.push_str(s.cfg.stats.source(stat).map_or("", |x| x));
         sig.push(';');
         keys.push(k);
+        labels.push(names);
     }
     let values = s.values();
     let rebuild = sig != s.rows_sig || s.rows.row_count() != Stat::ALL.len();
@@ -1109,9 +1254,13 @@ fn update_stat_rows(s: &mut State) {
             }
             continue;
         }
-        let auto = stat.auto_pick(&s.readings).map_or_else(|| "Auto".to_string(), |r| format!("Auto ({})", r.key));
+        let auto_prefix = if s.prefs.language == 1 { "Otomatik" } else { "Automatic" };
+        let auto = stat.auto_pick(&s.readings).map_or_else(
+            || auto_prefix.to_string(),
+            |r| format!("{auto_prefix} ({})", friendly_sensor_label(r)),
+        );
         let mut choices: Vec<SharedString> = vec![auto.into()];
-        choices.extend(keys[i].iter().map(|k| SharedString::from(k.as_str())));
+        choices.extend(labels[i].iter().map(|name| SharedString::from(name.as_str())));
         let index = s.cfg.stats.source(stat).and_then(|src| keys[i].iter().position(|k| k == src)).map_or(0, |p| p as i32 + 1);
         let row = StatRow { title: stat.title().into(), choices: ModelRc::new(VecModel::from(choices)), index, value };
         if i < s.rows.row_count() {
@@ -1216,7 +1365,7 @@ fn elevate(what: &str, result_file: &Path) -> Result<(), String> {
         info.lpParameters = params.as_ptr();
         info.nShow = SW_HIDE;
         if ShellExecuteExW(&mut info) == 0 || info.hProcess.is_null() {
-            return Err("The admin prompt was cancelled.".into());
+            return Err("Yönetici izni iptal edildi.".into());
         }
         WaitForSingleObject(info.hProcess, INFINITE);
         let mut code = 1u32;

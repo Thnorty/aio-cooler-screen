@@ -37,6 +37,10 @@ if (-not (Test-Path "$tp\pawnio\AMDFamily17.bin") -or -not (Test-Path "$tp\pawni
     Remove-Item $zip
 }
 
+# --- Fonts (OFL, official Google Fonts repository) --------------------------------------------
+& "$PSScriptRoot\tools\fetch-fonts.ps1"
+if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
 # --- App --------------------------------------------------------------------------------------
 if (-not (Test-Path assets\icon.ico)) {
     cargo build --release

@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "aio-screen"
-version = "1.2.1"
+version = "1.2.4"
 dependencies = [
  "ab_glyph",
  "chrono",

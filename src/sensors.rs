@@ -5,6 +5,10 @@
 //! - optionally LibreHardwareMonitor's web server (http://127.0.0.1:<port>/data.json).
 
 use std::ffi::c_char;
+use std::io::{BufRead, BufReader};
+use std::process::{Child, Command, Stdio};
+use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use libloading::os::windows::Library;
@@ -32,7 +36,7 @@ pub const LOC_GPU: i32 = 13;
 const NVML_RETRY: Duration = Duration::from_secs(60);
 
 /// One sensor value, flattened for display and selection.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Reading {
     /// Stable identifier: "<source> · <sensor> / <reading>".
     pub key: String,
@@ -193,6 +197,12 @@ fn walk_lhm(node: &LhmNode, depth: usize, hardware: &str, kinds: &[i32], out: &m
         let kind = match kind.as_str() {
             "Temperature" => READING_TEMP,
             "Load" => READING_USAGE,
+            "Voltage" => 2,
+            "Fan" => 3,
+            "Current" => 4,
+            "Power" => 5,
+            "Clock" => 6,
+            "Data" | "SmallData" | "Throughput" | "Control" | "Level" | "Factor" => 8,
             _ => 0,
         };
         if kind != 0 && (kinds.is_empty() || kinds.contains(&kind)) {
@@ -224,6 +234,129 @@ pub fn read_lhm(agent: &ureq::Agent, port: u16, kinds: &[i32]) -> Result<Vec<Rea
     let mut out = Vec::new();
     walk_lhm(&root, 0, "", kinds, &mut out);
     Ok(out)
+}
+
+// ---------------------------------------------------------------------------------------
+// Bundled LibreHardwareMonitorLib helper (no GUI, HTTP server, or external LHM process).
+// The helper is launched from the same trusted installation directory as aio-screen.exe.
+// It writes line-delimited JSON. A dedicated reader thread keeps the sensor service's
+// one-second loop from blocking on stdout or .NET hardware probing.
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct ProbeSnapshot {
+    schema_version: u32,
+    readings: Vec<ProbeSensor>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct ProbeSensor {
+    id: String,
+    hardware_name: String,
+    hardware_type: String,
+    name: String,
+    #[serde(rename = "Type")]
+    sensor_type: String,
+    value: f64,
+}
+
+fn probe_reading(s: ProbeSensor) -> Option<Reading> {
+    if !s.value.is_finite() || s.id.is_empty() { return None; }
+    let (kind, unit) = match s.sensor_type.as_str() {
+        "Temperature" => (1, "°C"),
+        "Voltage" => (2, "V"),
+        "Fan" => (3, "RPM"),
+        "Current" => (4, "A"),
+        "Power" => (5, "W"),
+        "Clock" => (6, "MHz"),
+        "Load" => (7, "%"),
+        "Control" | "Level" => (8, "%"),
+        "Data" => (8, "GB"),
+        "SmallData" => (8, "MB"),
+        "Throughput" => (8, "B/s"),
+        "Factor" | "Timing" => (8, ""),
+        _ => return None,
+    };
+    let location = match s.hardware_type.as_str() {
+        "Cpu" => LOC_CPU,
+        "GpuNvidia" | "GpuAmd" | "GpuIntel" => LOC_GPU,
+        _ => LOC_OTHER,
+    };
+    // Unlike the external LHM server's display-name key, internal keys are based on
+    // sensor.Identifier. Renames and localization do not invalidate saved widgets.
+    Some(Reading {
+        key: format!("Internal LHM · {}", s.id),
+        sensor: format!("Internal LHM · {}", s.hardware_name.trim_matches(char::from(0))),
+        name: s.name,
+        kind,
+        sensor_location: location,
+        value: s.value,
+        units: unit.to_string(),
+    })
+}
+
+struct InternalProbe {
+    child: Child,
+    reader: Option<JoinHandle<()>>,
+    latest: Arc<Mutex<Option<(Instant, Vec<Reading>)>>>,
+}
+
+impl InternalProbe {
+    fn start() -> Result<Self, String> {
+        let path = std::env::current_exe()
+            .map_err(|e| format!("cannot locate installation: {e}"))?
+            .parent()
+            .ok_or("cannot locate application directory")?
+            .join("SensorProbe.exe");
+        if !path.is_file() {
+            return Err("not bundled (SensorProbe.exe missing)".into());
+        }
+        let mut child = Command::new(&path)
+            .arg("--interval-ms").arg("1000")
+            .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null())
+            .spawn().map_err(|e| format!("cannot launch helper: {e}"))?;
+        let stdout = child.stdout.take().ok_or("cannot capture helper output")?;
+        let latest = Arc::new(Mutex::new(None));
+        let shared = Arc::clone(&latest);
+        let reader = std::thread::spawn(move || {
+            // Keep only the latest complete snapshot, never an incomplete JSON line.
+            for line in BufReader::new(stdout).lines() {
+                let Ok(line) = line else { break };
+                let Ok(snapshot) = serde_json::from_str::<ProbeSnapshot>(&line) else { continue };
+                if snapshot.schema_version != 1 { continue; }
+                let parsed = snapshot.readings.into_iter().filter_map(probe_reading).collect();
+                if let Ok(mut current) = shared.lock() {
+                    *current = Some((Instant::now(), parsed));
+                }
+            }
+        });
+        Ok(Self { child, reader: Some(reader), latest })
+    }
+
+    fn read(&mut self, kinds: &[i32]) -> Result<Vec<Reading>, String> {
+        match self.child.try_wait() {
+            Ok(Some(status)) => return Err(format!("helper exited ({status})")),
+            Err(e) => return Err(format!("helper process error: {e}")),
+            Ok(None) => {}
+        }
+        let data = self.latest.lock().map_err(|_| "helper reader lock error")?;
+        match data.as_ref() {
+            Some((timestamp, readings)) if timestamp.elapsed() <= Duration::from_secs(5) =>
+                Ok(readings.iter().filter(|r| kinds.is_empty() || kinds.contains(&r.kind)).cloned().collect()),
+            Some(_) => Err("helper data is stale".into()),
+            None => Err("waiting for first sensor snapshot".into()),
+        }
+    }
+}
+
+impl Drop for InternalProbe {
+    fn drop(&mut self) {
+        // Closing the service kills the helper; it must never be orphaned.
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+        if let Some(reader) = self.reader.take() { let _ = reader.join(); }
+    }
 }
 
 // ---------------------------------------------------------------------------------------
@@ -315,6 +448,8 @@ pub struct SensorHub {
     nvml: Option<Nvml>,
     nvml_status: String,
     next_driver_try: Instant,
+    internal_probe: Option<InternalProbe>,
+    next_probe_try: Instant,
 }
 
 impl Default for SensorHub {
@@ -334,6 +469,8 @@ impl Default for SensorHub {
             nvml: None,
             nvml_status: String::new(),
             next_driver_try: Instant::now(),
+            internal_probe: None,
+            next_probe_try: Instant::now(),
         }
     }
 }
@@ -371,6 +508,36 @@ impl SensorHub {
         }
         if let Some(load) = self.cpu_load.read().filter(|_| want(READING_USAGE)) {
             readings.push(Reading::new("Built-in", &self.cpu_name, "Total CPU Usage", READING_USAGE, LOC_CPU, load, "%"));
+        }
+
+        // Internal readings are an independent source; external LHM, HWiNFO and
+        // built-in sensors remain available and their saved keys are unchanged.
+        if self.internal_probe.is_none() && Instant::now() >= self.next_probe_try {
+            match InternalProbe::start() {
+                Ok(p) => self.internal_probe = Some(p),
+                Err(e) => {
+                    summary.push(format!("Internal LHM: {e}"));
+                    self.next_probe_try = Instant::now() + Duration::from_secs(30);
+                }
+            }
+        }
+        if let Some(probe) = self.internal_probe.as_mut() {
+            match probe.read(kinds) {
+                Ok(r) => {
+                    summary.push(format!("Internal LHM: ok ({} readings)", r.len()));
+                    readings.extend(r);
+                }
+                Err(e) => {
+                    // Exit means a one-off restart. Staleness may be transient while
+                    // the helper is enumerating hardware, so keep it running.
+                    let exited = e.starts_with("helper exited") || e.starts_with("helper process error");
+                    summary.push(format!("Internal LHM: {e}"));
+                    if exited {
+                        self.internal_probe = None;
+                        self.next_probe_try = Instant::now() + Duration::from_secs(10);
+                    }
+                }
+            }
         }
 
         for (name, result) in [("HWiNFO", read_hwinfo(kinds)), ("LibreHardwareMonitor", read_lhm(&self.agent, lhm_port, kinds))] {
