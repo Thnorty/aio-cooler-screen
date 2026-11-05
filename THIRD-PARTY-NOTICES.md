@@ -38,8 +38,16 @@ following separate components, each under its own licence.
 - Project and source: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor
 - Package: https://www.nuget.org/packages/LibreHardwareMonitorLib/0.9.6
 - The MPL-2.0 license text is included at `licenses/MPL-2.0.txt` in this repository and the Windows installation. The upstream source is linked above.
-- When distributing binaries, make the MPL-covered component's corresponding source available according to MPL-2.0 and review the full transitive dependency notices; this summary alone is not a complete dependency-license audit.
+- It is used unmodified; its source is available at the project link above, as MPL-2.0 requires.
 
 ## .NET runtime
 
-- The sensor helper is published with .NET 8 runtime components. Review their licenses and runtime redistribution obligations before distributing the installer.
+- The sensor helper includes the .NET 8 runtime, licensed under the **MIT License**.
+  https://github.com/dotnet/runtime
+
+## Fonts
+
+- The installer includes Google Sans, Google Sans Flex, Inter, Rajdhani, Oxanium, JetBrains Mono,
+  Roboto Condensed and Oswald from [Google Fonts](https://github.com/google/fonts), licensed under the
+  **SIL Open Font License 1.1**. Each family's licence is in `fonts\licenses\` in the install folder.
+  They are used only to draw the cooler screen and are not installed into Windows.
