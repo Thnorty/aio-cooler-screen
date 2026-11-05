@@ -81,7 +81,7 @@ jobs:
         run: |
           installer=$(ls out/dist/*.exe)
           sha=$(grep "$(basename "$installer")" out/dist/SHA256SUMS.txt | cut -d' ' -f1)
-          gh release create "$GITHUB_REF_NAME" "$installer" out/dist/SHA256SUMS.txt \
+          gh release create "$GITHUB_REF_NAME" "$installer" \
             --repo "$GITHUB_REPOSITORY" --draft --title "$GITHUB_REF_NAME" \
             --notes "Built from $GITHUB_SHA by [this workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID).
 
