@@ -215,7 +215,11 @@ fn worker(stop_rx: &mpsc::Receiver<()>) {
                     applied = Some(cfg.media_version);
                 }
                 let values = cfg.stats.resolve(&readings);
-                let png = encode_png(&overlay::render(&cfg.stats, &values, chrono::Local::now()))?;
+                let mut osd = overlay::render(&cfg.stats, &values, chrono::Local::now());
+                if cfg.media_is_video {
+                    overlay::compensate_for_video(&mut osd);
+                }
+                let png = encode_png(&osd)?;
                 s.upload(&png, &timestamp_name("osd"), MediaKind::Overlay)
             })();
             match result {

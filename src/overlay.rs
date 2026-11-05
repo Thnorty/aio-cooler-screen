@@ -680,9 +680,82 @@ pub fn render(cfg: &StatsConfig, values: &StatValues, now: DateTime<Local>) -> R
     img
 }
 
+/// How strongly the cooler fades see-through overlay pixels over video, matched by eye on the
+/// device against the same design over a still background.
+const VIDEO_ALPHA_POWER: f32 = 4.0;
+
+/// Adjust an overlay for a video background. Over video the cooler weights the overlay's colour
+/// by its alpha several times (shown on screen ≈ colour·a⁴ + background·(1 − a)), so see-through
+/// light pixels fade away: the ring tracks vanish and labels dim, while black dimming still
+/// works. Each pixel is rewritten so the extra weighting lands on the intended colour; where
+/// that needs a colour above 255, the alpha is raised just enough (the background shows a
+/// little less).
+pub fn compensate_for_video(img: &mut RgbaImage) {
+    let power = VIDEO_ALPHA_POWER;
+    for px in img.pixels_mut() {
+        let a = px[3] as f32 / 255.0;
+        if a <= 0.0 || a >= 1.0 {
+            continue;
+        }
+        // Intended colour contribution per channel (premultiplied), 0..1.
+        let p = [px[0], px[1], px[2]].map(|c| c as f32 / 255.0 * a);
+        let peak = p.iter().fold(0.0_f32, |m, v| m.max(*v));
+        let a2 = a.max(peak.powf(1.0 / power));
+        let weight = a2.powf(power);
+        for (c, v) in p.iter().enumerate() {
+            px[c] = (v / weight * 255.0).round().min(255.0) as u8;
+        }
+        px[3] = (a2 * 255.0).round() as u8;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// What the cooler shows over video for one channel (see `compensate_for_video`).
+    fn on_video(c: u8, a: u8, bg: f32) -> f32 {
+        let a = a as f32 / 255.0;
+        c as f32 * a.powf(VIDEO_ALPHA_POWER) + bg * (1.0 - a)
+    }
+
+    #[test]
+    fn video_compensation_restores_faint_light_pixels() {
+        // A ring track: white at 34/255. Intended light added on top of the background: 34.
+        let mut img = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 34]));
+        compensate_for_video(&mut img);
+        let p = img.get_pixel(0, 0);
+        let added = on_video(p[0], p[3], 0.0);
+        assert!((added - 34.0).abs() < 1.5, "added {added}");
+        // Without compensation it would have added almost nothing.
+        assert!(on_video(255, 34, 0.0) < 5.0);
+    }
+
+    #[test]
+    fn video_compensation_keeps_dark_and_opaque_pixels() {
+        let mut img = RgbaImage::from_fn(3, 1, |x, _| match x {
+            0 => image::Rgba([0, 0, 0, 120]),       // background dimming
+            1 => image::Rgba([200, 40, 90, 255]),   // solid arc
+            _ => image::Rgba([0, 0, 0, 0]),         // nothing
+        });
+        let before = img.clone();
+        compensate_for_video(&mut img);
+        assert_eq!(img, before);
+    }
+
+    #[test]
+    fn video_compensation_matches_intended_colour_for_labels() {
+        // Label text: light grey at 170/255 over a mid background.
+        let (c, a, bg) = (230u8, 170u8, 100.0);
+        let intended = c as f32 * a as f32 / 255.0 + bg * (1.0 - a as f32 / 255.0);
+        let mut img = RgbaImage::from_pixel(1, 1, image::Rgba([c, c, c, a]));
+        compensate_for_video(&mut img);
+        let p = img.get_pixel(0, 0);
+        let shown = on_video(p[0], p[3], bg);
+        // The colour contribution is exact; only a little less background shows through.
+        assert!((shown - intended).abs() < 25.0, "shown {shown}, intended {intended}");
+        assert!(shown > on_video(c, a, bg) + 20.0, "should be clearly brighter than uncompensated");
+    }
 
     #[test]
     fn every_design_and_font_renders_and_disabled_is_blank() {
