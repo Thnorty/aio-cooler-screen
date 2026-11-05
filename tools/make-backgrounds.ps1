@@ -84,14 +84,24 @@ $nebulaStars = New-Stars $rng 260 $S 0.4 1.8 3 90 165
 $blobs = @(@(150, 170, 210, (C 255 120 60 220), 120), @(330, 300, 230, (C 255 30 140 230), 110), @(300, 140, 150, (C 255 230 70 160), 80), @(170, 350, 160, (C 255 40 200 190), 70))
 Render 'nebula' { param($g) Fill-Radial $g (C 255 22 18 48) (C 255 4 4 12) } {
     param($g, $phi)
+    # The clouds swirl on wide circles (alternating direction) and breathe in size and brightness.
     for ($j = 0; $j -lt $blobs.Count; $j++) {
-        $bl = $blobs[$j]; $p = $phi + $j * 1.6
-        Glow $g ($bl[0] + 18 * [math]::Cos($p)) ($bl[1] + 14 * [math]::Sin($p)) ($bl[2] * (1 + 0.05 * [math]::Sin($p))) $bl[3] ($bl[4] * (0.85 + 0.15 * [math]::Sin($phi + $j)))
+        $bl = $blobs[$j]; $dir = if ($j % 2) { -1 } else { 1 }; $p = $dir * $phi + $j * 1.6
+        Glow $g ($bl[0] + 55 * [math]::Cos($p)) ($bl[1] + 45 * [math]::Sin($p)) ($bl[2] * (1 + 0.15 * [math]::Sin($phi + $j * 2.1))) $bl[3] ($bl[4] * (0.7 + 0.3 * [math]::Sin($phi + $j)))
     }
-    foreach ($st in $nebulaStars) { Dot $g $st.X $st.Y $st.R (C ($st.A * (Twinkle $phi $st)) 255 255 255) }
+    foreach ($st in $nebulaStars) { Dot $g $st.X $st.Y $st.R (C ($st.A * (0.15 + 0.85 * (0.5 + 0.5 * [math]::Sin($st.Speed * $phi + $st.Phase)))) 255 255 255) }
     $n = 0
     foreach ($star in @(@(110, 120), @(360, 90), @(400, 380), @(90, 330))) {
-        Glow $g $star[0] $star[1] 10 (C 255 255 255 255) (200 * (0.7 + 0.3 * [math]::Sin(2 * $phi + $n * 1.7))); $n++
+        Glow $g $star[0] $star[1] (10 + 4 * [math]::Sin(2 * $phi + $n * 1.7)) (C 255 255 255 255) (220 * (0.45 + 0.55 * [math]::Sin(2 * $phi + $n * 1.7))); $n++
+    }
+    # A shooting star once per loop, crossing during the first fifth of it.
+    $u = $phi / $TAU / 0.2
+    if ($u -gt 0 -and $u -lt 1) {
+        $hx = 60 + 360 * $u; $hy = 60 + 160 * $u
+        for ($k = 0; $k -lt 12; $k++) {
+            $pen = [Drawing.Pen]::new((C ([int]((230 - $k * 19) * [math]::Sin([math]::PI * $u))) 255 255 255), [float](2.4 - $k * 0.15))
+            $g.DrawLine($pen, [float]($hx - $k * 9), [float]($hy - $k * 4), [float]($hx - ($k + 1) * 9), [float]($hy - ($k + 1) * 4)); $pen.Dispose()
+        }
     }
 }
 
@@ -171,12 +181,12 @@ Render 'sunset' {
 } {
     param($g, $phi)
     foreach ($st in $sunsetStars) { Dot $g $st.X $st.Y $st.R (C ($st.A * (Twinkle $phi $st)) 255 240 230) }
-    $bob = 4 * [math]::Sin($phi)
-    Glow $g 240 (300 + $bob) (170 + 8 * [math]::Sin(2 * $phi)) (C 255 255 210 140) (160 * (0.85 + 0.15 * [math]::Sin(2 * $phi)))
+    $bob = 12 * [math]::Sin($phi)
+    Glow $g 240 (300 + $bob) (170 + 25 * [math]::Sin(2 * $phi)) (C 255 255 210 140) (160 * (0.7 + 0.3 * [math]::Sin(2 * $phi)))
     $br = New-Object Drawing.SolidBrush (C 255 255 236 190); $g.FillEllipse($br, 180, 240 + $bob, 120, 120); $br.Dispose()
     for ($li = 0; $li -lt $layers.Count; $li++) {
         $l = $layers[$li]
-        $sway = 0.35 * [math]::Sin($phi + $li * 2.1)
+        $sway = 0.9 * [math]::Sin($phi + $li * 2.1)
         $pts = @(([Drawing.PointF]::new(0, 480)))
         for ($x = 0; $x -le 480; $x += 20) { $pts += [Drawing.PointF]::new($x, $l[0] + $l[2] * [math]::Sin(($x + $l[0]) / 60.0 + $sway)) }
         $pts += [Drawing.PointF]::new(480, 480)
