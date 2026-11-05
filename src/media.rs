@@ -58,19 +58,19 @@ pub fn encode_png(img: &RgbaImage) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 
+/// Scale an image for the screen. Transparent parts become black: the screen has nothing to
+/// show through them.
 pub fn fit_image(img: &DynamicImage, fit: Fit) -> RgbaImage {
-    match fit {
+    let scaled = match fit {
         Fit::Cover => img.resize_to_fill(SCREEN_SIZE, SCREEN_SIZE, FilterType::Lanczos3).to_rgba8(),
         Fit::Stretch => img.resize_exact(SCREEN_SIZE, SCREEN_SIZE, FilterType::Lanczos3).to_rgba8(),
-        Fit::Contain => {
-            let scaled = img.resize(SCREEN_SIZE, SCREEN_SIZE, FilterType::Lanczos3).to_rgba8();
-            let mut canvas = RgbaImage::from_pixel(SCREEN_SIZE, SCREEN_SIZE, Rgba([0, 0, 0, 255]));
-            let x = (SCREEN_SIZE - scaled.width()) / 2;
-            let y = (SCREEN_SIZE - scaled.height()) / 2;
-            image::imageops::overlay(&mut canvas, &scaled, x.into(), y.into());
-            canvas
-        }
-    }
+        Fit::Contain => img.resize(SCREEN_SIZE, SCREEN_SIZE, FilterType::Lanczos3).to_rgba8(),
+    };
+    let mut canvas = RgbaImage::from_pixel(SCREEN_SIZE, SCREEN_SIZE, Rgba([0, 0, 0, 255]));
+    let x = (SCREEN_SIZE - scaled.width()) / 2;
+    let y = (SCREEN_SIZE - scaled.height()) / 2;
+    image::imageops::overlay(&mut canvas, &scaled, x.into(), y.into());
+    canvas
 }
 
 pub fn prepare_image(path: &Path, fit: Fit) -> Result<RgbaImage, String> {
@@ -95,7 +95,9 @@ fn video_filter(fit: Fit, extra: &str) -> String {
         }
         Fit::Stretch => format!("scale={s}:{s}"),
     };
-    format!("{scale},setsar=1{extra}")
+    // Premultiplying makes transparent areas (GIFs, WebM with alpha) black instead of showing
+    // whatever colour they hide once the alpha is dropped.
+    format!("format=rgba,premultiply=inplace=1,{scale},setsar=1{extra}")
 }
 
 /// Convert any video to the format the screen plays and write it to `out`.
@@ -131,4 +133,22 @@ pub fn video_poster(path: &Path, fit: Fit) -> Result<RgbaImage, String> {
     image::load_from_memory(&output.stdout)
         .map(|i| i.to_rgba8())
         .map_err(|e| format!("cannot read video frame: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn transparent_parts_become_black() {
+        // A see-through image hiding red, with an opaque white square in the middle.
+        let img = RgbaImage::from_fn(100, 100, |x, y| {
+            if (40..60).contains(&x) && (40..60).contains(&y) { Rgba([255, 255, 255, 255]) } else { Rgba([255, 0, 0, 0]) }
+        });
+        for fit in [Fit::Cover, Fit::Contain, Fit::Stretch] {
+            let out = fit_image(&DynamicImage::ImageRgba8(img.clone()), fit);
+            assert_eq!(*out.get_pixel(5, 5), Rgba([0, 0, 0, 255]), "{fit:?}");
+            assert_eq!(*out.get_pixel(240, 240), Rgba([255, 255, 255, 255]), "{fit:?}");
+        }
+    }
 }

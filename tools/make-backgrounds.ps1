@@ -13,7 +13,8 @@ if (-not $ffmpeg) { throw 'ffmpeg is not on PATH; it is needed to encode the ani
 $S = 480
 $TAU = 2 * [math]::PI
 
-function New-Canvas { $b = [Drawing.Bitmap]::new($S, $S); $g = [Drawing.Graphics]::FromImage($b); $g.SmoothingMode = 'AntiAlias'; $g.InterpolationMode = 'HighQualityBicubic'; $g.CompositingQuality = 'HighQuality'; return @($b, $g) }
+# Starts opaque black, so anti-aliased edges never leave see-through pixels.
+function New-Canvas { $b = [Drawing.Bitmap]::new($S, $S); $g = [Drawing.Graphics]::FromImage($b); $g.Clear([Drawing.Color]::Black); $g.SmoothingMode = 'AntiAlias'; $g.InterpolationMode = 'HighQualityBicubic'; $g.CompositingQuality = 'HighQuality'; return @($b, $g) }
 function C([int]$a, [int]$r, [int]$gg, [int]$bb) { [Drawing.Color]::FromArgb([math]::Max(0, [math]::Min(255, $a)), $r, $gg, $bb) }
 
 # Soft glow: a radial gradient blob that fades to transparent.
@@ -133,17 +134,9 @@ Render 'aurora' { param($g) Fill-Radial $g (C 255 8 34 44) (C 255 2 8 14) } {
     $br = New-Object Drawing.SolidBrush (C 255 3 10 14); $g.FillPolygon($br, [Drawing.PointF[]]$mountain); $br.Dispose()
 }
 
-# 3) Neon rings: glowing rings that breathe, with a bright spark circling each one.
-$rings = @(@(228, (C 255 255 40 120), 3, 1), @(212, (C 255 0 220 255), 2, -1), @(150, (C 255 140 80 255), 1.5, 1))
-Render 'neon-rings' {
-    param($g)
-    Fill-Radial $g (C 255 26 26 32) (C 255 6 6 9)
-    for ($y = 0; $y -lt $S; $y += 6) {
-        for ($x = (($y / 6) % 2) * 6; $x -lt $S; $x += 12) {
-            $br = New-Object Drawing.SolidBrush (C 14 255 255 255); $g.FillRectangle($br, $x, $y, 6, 3); $br.Dispose()
-        }
-    }
-} {
+# 3) Neon rings: glowing rings on black that breathe, with a bright spark circling each one.
+$rings = @(@(184, (C 255 255 40 120), 3, 1), @(170, (C 255 0 220 255), 2, -1), @(120, (C 255 140 80 255), 1.5, 1))
+Render 'neon-rings' { param($g) } {
     param($g, $phi)
     for ($ri = 0; $ri -lt $rings.Count; $ri++) {
         $ring = $rings[$ri]
@@ -163,7 +156,7 @@ Render 'neon-rings' {
             $g.DrawArc($pen, 240 - $rad, 240 - $rad, 2 * $rad, 2 * $rad, [float]($angle - $ring[3] * $t * 5), [float]($ring[3] * 5)); $pen.Dispose()
         }
     }
-    Glow $g 240 240 140 (C 255 120 60 255) (50 * (0.7 + 0.3 * [math]::Sin($phi)))
+    Glow $g 240 240 112 (C 255 120 60 255) (50 * (0.7 + 0.3 * [math]::Sin($phi)))
 }
 
 # 4) Sunset: a pulsing sun that bobs gently, swaying hills and a few twinkling stars.
