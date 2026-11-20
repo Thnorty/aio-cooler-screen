@@ -20,7 +20,7 @@ use windows_service::{define_windows_service, service_dispatcher};
 
 use crate::config::{self, Config, Status, SERVICE_DISPLAY_NAME, SERVICE_NAME};
 use crate::device::Screen;
-use crate::media::{encode_png, now_ms, timestamp_name, SCREEN_SIZE};
+use crate::media::{self, encode_png, now_ms, timestamp_name, SCREEN_SIZE};
 use crate::overlay;
 use crate::protocol::MediaKind;
 use crate::sensors::{Reading, SensorHub};
@@ -114,6 +114,31 @@ fn media_path(cfg: &Config) -> Option<std::path::PathBuf> {
     (Path::new(name).file_name()? == name).then(|| config::data_dir().join(name))
 }
 
+/// The background as the screen should get it. With flipping on, a video is replaced by the
+/// flipped copy the app makes (the service has no ffmpeg of its own; without the copy the video
+/// plays unflipped), and an image is flipped here.
+fn background_for_upload(cfg: &Config) -> Option<(std::path::PathBuf, Result<Vec<u8>, String>)> {
+    let path = media_path(cfg)?;
+    if cfg.media_is_video && cfg.flipped() {
+        let name = media::flipped_video_name(cfg.media_file.as_deref()?, cfg.flip_h, cfg.flip_v);
+        let flipped = config::data_dir().join(name);
+        if flipped.exists() {
+            let data = std::fs::read(&flipped).map_err(|e| e.to_string());
+            return Some((flipped, data));
+        }
+    }
+    let data = std::fs::read(&path).map_err(|e| e.to_string());
+    if cfg.media_is_video || !cfg.flipped() {
+        return Some((path, data));
+    }
+    let data = data.and_then(|bytes| {
+        let mut img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?.to_rgba8();
+        media::flip(&mut img, cfg.flip_h, cfg.flip_v);
+        encode_png(&img)
+    });
+    Some((path, data))
+}
+
 /// Darken the screen and ask it to switch off. The opaque black overlay makes it go dark
 /// at once even if the screen ignores the power command.
 fn blank(s: &mut Screen) -> Result<(), String> {
@@ -200,10 +225,10 @@ fn worker(stop_rx: &mpsc::Receiver<()>) {
                     log("re-sent connect handshake after a gap");
                 }
                 if applied != Some(cfg.media_version) {
-                    if let Some(path) = media_path(&cfg) {
+                    if let Some((path, data)) = background_for_upload(&cfg) {
                         // A missing or unreadable file is a settings problem, not a device
                         // error: log it and keep showing the stats.
-                        match std::fs::read(&path) {
+                        match data {
                             Ok(data) => {
                                 let (ext, kind) = if cfg.media_is_video { ("mp4", MediaKind::Video) } else { ("png", MediaKind::Image) };
                                 s.upload(&data, &timestamp_name(ext), kind)?;
@@ -219,6 +244,7 @@ fn worker(stop_rx: &mpsc::Receiver<()>) {
                 if cfg.media_is_video {
                     overlay::compensate_for_video(&mut osd);
                 }
+                media::flip(&mut osd, cfg.flip_h, cfg.flip_v);
                 let png = encode_png(&osd)?;
                 s.upload(&png, &timestamp_name("osd"), MediaKind::Overlay)
             })();

@@ -433,6 +433,8 @@ export component AppWindow inherits Window {
     in property <bool> autostart-busy;
     in-out property <bool> show-tray;
     in-out property <bool> hardware-acceleration: true;
+    in-out property <bool> flip-h;
+    in-out property <bool> flip-v;
     // What the window was started with; the switch only applies after a restart.
     in property <bool> hardware-acceleration-at-start: true;
     in-out property <bool> login-tray;
@@ -467,6 +469,7 @@ export component AppWindow inherits Window {
     callback autostart-toggled(bool);
     callback show-tray-toggled(bool);
     callback hardware-acceleration-toggled(bool);
+    callback flip-changed(bool, bool);
     callback restart-app();
     callback login-toggled(bool);
     callback toggle-display();
@@ -1435,6 +1438,24 @@ export component AppWindow inherits Window {
                                 enabled: root.show-tray;
                                 checked <=> root.login-tray;
                                 toggled => { root.login-toggled(self.checked); }
+                            }
+                        }
+                    }
+                    Card {
+                        title: @tr("Screen orientation");
+                        subtitle: @tr("For a pump mounted sideways or upside down. Turn both on to rotate the picture 180°. The preview here stays upright.");
+                        SettingRow {
+                            label: @tr("Flip horizontally");
+                            Switch {
+                                checked <=> root.flip-h;
+                                toggled => { root.flip-changed(root.flip-h, root.flip-v); }
+                            }
+                        }
+                        SettingRow {
+                            label: @tr("Flip vertically");
+                            Switch {
+                                checked <=> root.flip-v;
+                                toggled => { root.flip-changed(root.flip-h, root.flip-v); }
                             }
                         }
                     }

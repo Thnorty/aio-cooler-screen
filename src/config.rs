@@ -493,9 +493,17 @@ pub struct Config {
     pub stats: StatsConfig,
     /// The user turned the screen off: the service blanks it and stops waking it.
     pub display_off: bool,
+    /// Mirror everything sent to the screen left-right and/or upside down, for a pump that is
+    /// mounted turned. Both together rotate it 180°.
+    pub flip_h: bool,
+    pub flip_v: bool,
 }
 
 impl Config {
+    pub fn flipped(&self) -> bool {
+        self.flip_h || self.flip_v
+    }
+
     pub fn load() -> Config {
         let Ok(text) = std::fs::read_to_string(config_path()) else { return Config::default() };
         serde_json::from_str(&text)
@@ -525,6 +533,8 @@ fn migrate_v1(v: serde_json::Value) -> Config {
         media_version: from(get(&v, "media_version")).unwrap_or_default(),
         stats: StatsConfig::default(),
         display_off: false,
+        flip_h: false,
+        flip_v: false,
     };
     let s = get(&v, "stats");
     let st = &mut cfg.stats;

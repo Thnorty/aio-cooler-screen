@@ -57,6 +57,8 @@ enum Job {
     Autostart(Result<(), String>),
     FfmpegFound(Option<PathBuf>),
     FfmpegDownloaded(Result<(), String>),
+    /// A flipped copy of this video background is ready (see `video_flip_ready`).
+    Flipped(Result<String, String>),
 }
 
 struct State {
@@ -366,7 +368,9 @@ fn set_media(ui: &AppWindow, s: &mut State, file: String, is_video: bool, source
     let old = s.cfg.media_file.replace(file);
     s.cfg.media_is_video = is_video;
     s.cfg.media_source = Some(source);
-    s.cfg.media_version += 1;
+    if video_flip_ready(ui, s) {
+        s.cfg.media_version += 1;
+    }
     if let Err(e) = s.cfg.save() {
         show_message(ui, false, format!("{}: {e}", tr("Could not save settings")));
         return false;
@@ -374,10 +378,47 @@ fn set_media(ui: &AppWindow, s: &mut State, file: String, is_video: bool, source
     if let Some(old) = old.filter(|o| Some(o) != s.cfg.media_file.as_ref() && !o.starts_with(library::PREFIX)) {
         let _ = std::fs::remove_file(config::data_dir().join(old));
     }
+    remove_stale_flips(&s.cfg);
     ui.set_media_name(media_label(&s.cfg).into());
     ui.set_bg_selected(builtin_index(&s.cfg));
     ui.set_lib_selected(library_index(s));
     true
+}
+
+/// With flipping on, a video background is sent as a flipped copy made with ffmpeg (the
+/// service flips images and the stats itself). Returns true when the screen can be updated now;
+/// otherwise a job is making the copy and bumps the media version once it's ready, so the screen
+/// never shows the video the wrong way round in between.
+fn video_flip_ready(ui: &AppWindow, s: &State) -> bool {
+    let Some(file) = s.cfg.media_file.clone().filter(|_| s.cfg.media_is_video && s.cfg.flipped()) else { return true };
+    let name = media::flipped_video_name(&file, s.cfg.flip_h, s.cfg.flip_v);
+    if config::data_dir().join(&name).exists() {
+        return true;
+    }
+    if s.ffmpeg.is_none() {
+        show_message(ui, false, tr("Flipping a video background needs ffmpeg (Settings → Video support). It plays unflipped for now."));
+        return true;
+    }
+    let (h, v) = (s.cfg.flip_h, s.cfg.flip_v);
+    let (src, out) = (config::data_dir().join(&file), config::data_dir().join(&name));
+    s.spawn(move || Job::Flipped(media::flip_video(&src, &out, h, v).map(|_| file)));
+    false
+}
+
+/// Delete flipped video copies other than the one the current background uses.
+fn remove_stale_flips(cfg: &Config) {
+    let keep = cfg
+        .media_file
+        .as_deref()
+        .filter(|_| cfg.media_is_video && cfg.flipped())
+        .map(|f| media::flipped_video_name(f, cfg.flip_h, cfg.flip_v));
+    let Ok(entries) = std::fs::read_dir(config::data_dir()) else { return };
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if media::is_flipped_video(&name) && Some(&name) != keep.as_ref() {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
 }
 
 /// Write built-in background `i` to the data dir, as video or still, and put it on the screen.
@@ -458,6 +499,8 @@ fn init_ui(ui: &AppWindow, state: &State) {
     ui.set_preview_shape(state.prefs.preview_shape.clamp(0, 1));
     ui.set_hardware_acceleration(state.prefs.hardware_acceleration);
     ui.set_hardware_acceleration_at_start(state.prefs.hardware_acceleration);
+    ui.set_flip_h(state.cfg.flip_h);
+    ui.set_flip_v(state.cfg.flip_v);
     ui.set_display_off(state.cfg.display_off);
     let kinds: Vec<SharedString> = WidgetKind::ALL.iter().map(|k| {
         let name = localized_widget_kind(*k); name.into()
@@ -1117,6 +1160,21 @@ fn wire_callbacks(ui: &AppWindow, state: &Rc<RefCell<State>>) {
 
     let weak = ui.as_weak();
     let st = state.clone();
+    ui.on_flip_changed(move |h, v| {
+        let Some(ui) = weak.upgrade() else { return };
+        let mut s = st.borrow_mut();
+        s.cfg.flip_h = h;
+        s.cfg.flip_v = v;
+        // Re-send the background the new way round (a video once its flipped copy is ready).
+        if video_flip_ready(&ui, &s) {
+            s.cfg.media_version += 1;
+        }
+        save(&ui, &s);
+        remove_stale_flips(&s.cfg);
+    });
+
+    let weak = ui.as_weak();
+    let st = state.clone();
     ui.on_hardware_acceleration_toggled(move |on| {
         let Some(ui) = weak.upgrade() else { return };
         let mut s = st.borrow_mut();
@@ -1271,6 +1329,26 @@ fn tick(ui: &AppWindow, state: &Rc<RefCell<State>>) {
             Job::FfmpegFound(path) => {
                 s.ffmpeg = path;
                 update_ffmpeg_ui(ui, &s);
+                // A flipped video background may have been waiting for ffmpeg.
+                if s.ffmpeg.is_some() && !video_flip_ready(ui, &s) {
+                    show_message(ui, true, tr("Flipping the video background…"));
+                }
+            }
+            Job::Flipped(result) => {
+                match result {
+                    Ok(file) if s.cfg.media_file.as_deref() == Some(file.as_str()) => {
+                        s.cfg.media_version += 1;
+                        save(ui, &s);
+                    }
+                    Ok(_) => {} // the background changed meanwhile
+                    Err(e) => {
+                        // Better unflipped than not at all.
+                        show_message(ui, false, e);
+                        s.cfg.media_version += 1;
+                        save(ui, &s);
+                    }
+                }
+                remove_stale_flips(&s.cfg);
             }
             Job::FfmpegDownloaded(r) => {
                 ui.set_ffmpeg_busy(false);

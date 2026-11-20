@@ -826,6 +826,30 @@ msgctxt "Rust"
 msgid "Could not load the background preview"
 msgstr "Arka plan önizlemesi yüklenemedi"
 
+msgctxt "AppWindow"
+msgid "Screen orientation"
+msgstr "Ekran yönü"
+
+msgctxt "AppWindow"
+msgid "For a pump mounted sideways or upside down. Turn both on to rotate the picture 180°. The preview here stays upright."
+msgstr "Yan ya da ters takılmış pompalar için. Görüntüyü 180° döndürmek için ikisini de açın. Buradaki önizleme düz kalır."
+
+msgctxt "AppWindow"
+msgid "Flip horizontally"
+msgstr "Yatay çevir"
+
+msgctxt "AppWindow"
+msgid "Flip vertically"
+msgstr "Dikey çevir"
+
+msgctxt "Rust"
+msgid "Flipping a video background needs ffmpeg (Settings → Video support). It plays unflipped for now."
+msgstr "Video arka planı çevirmek için ffmpeg gerekir (Ayarlar → Video desteği). Şimdilik çevrilmeden oynatılıyor."
+
+msgctxt "Rust"
+msgid "Flipping the video background…"
+msgstr "Video arka planı çevriliyor…"
+
 # Text drawn on the cooler screen.
 
 msgctxt "Screen"

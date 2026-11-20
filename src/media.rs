@@ -73,6 +73,48 @@ pub fn fit_image(img: &DynamicImage, fit: Fit) -> RgbaImage {
     canvas
 }
 
+/// Mirror an image left-right and/or upside down.
+pub fn flip(img: &mut RgbaImage, h: bool, v: bool) {
+    if h {
+        image::imageops::flip_horizontal_in_place(img);
+    }
+    if v {
+        image::imageops::flip_vertical_in_place(img);
+    }
+}
+
+/// The data-dir file name of `video`'s flipped copy, e.g. `lib-5.flip-hv.mp4`.
+pub fn flipped_video_name(video: &str, h: bool, v: bool) -> String {
+    let stem = Path::new(video).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    format!("{stem}.flip-{}{}.mp4", if h { "h" } else { "" }, if v { "v" } else { "" })
+}
+
+/// Whether a data-dir file name is a flipped copy made by `flip_video`.
+pub fn is_flipped_video(name: &str) -> bool {
+    name.contains(".flip-") && name.ends_with(".mp4")
+}
+
+/// Write a mirrored copy of a screen-ready video (already 480x480 at the screen's frame rate).
+pub fn flip_video(src: &Path, out: &Path, h: bool, v: bool) -> Result<(), String> {
+    let ffmpeg = find_ffmpeg()?;
+    let filters: Vec<&str> = [(h, "hflip"), (v, "vflip")].into_iter().filter(|(on, _)| *on).map(|(_, f)| f).collect();
+    let output = ffmpeg_command(&ffmpeg)
+        .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
+        .arg(src)
+        .args(["-vf", &filters.join(",")])
+        .args(["-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p"])
+        .args(["-b:v", "1000k", "-maxrate", "1500k", "-bufsize", "2000k"])
+        .args(["-an", "-movflags", "+faststart"])
+        .arg(out)
+        .output()
+        .map_err(|e| format!("failed to run ffmpeg: {e}"))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!("ffmpeg failed to flip {}: {}", src.display(), String::from_utf8_lossy(&output.stderr).trim()))
+    }
+}
+
 pub fn prepare_image(path: &Path, fit: Fit) -> Result<RgbaImage, String> {
     let img = image::open(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     Ok(fit_image(&img, fit))
@@ -138,6 +180,19 @@ pub fn video_poster(path: &Path, fit: Fit) -> Result<RgbaImage, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn flips_and_names_flipped_videos() {
+        let mut img = RgbaImage::from_fn(2, 2, |x, y| Rgba([x as u8, y as u8, 0, 255]));
+        flip(&mut img, true, false);
+        assert_eq!(img.get_pixel(0, 0)[0], 1);
+        flip(&mut img, false, true);
+        assert_eq!((img.get_pixel(0, 0)[0], img.get_pixel(0, 0)[1]), (1, 1));
+        assert_eq!(flipped_video_name("lib-5.mp4", true, true), "lib-5.flip-hv.mp4");
+        assert_eq!(flipped_video_name("media-9.mp4", false, true), "media-9.flip-v.mp4");
+        assert!(is_flipped_video("media-9.flip-v.mp4"));
+        assert!(!is_flipped_video("media-9.mp4"));
+    }
 
     #[test]
     fn transparent_parts_become_black() {
