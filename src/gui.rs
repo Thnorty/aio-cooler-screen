@@ -1406,6 +1406,7 @@ fn tick(ui: &AppWindow, state: &Rc<RefCell<State>>) {
     match &status {
         Some(st) => {
             ui.set_cooler_ok(st.device_connected);
+            ui.set_cooler_error(!st.device_connected);
             ui.set_cooler_state((if st.device_connected { tr("Cooler connected") } else { tr("Cooler not found") }).into());
             ui.set_sensors_state(st.sensors.clone().into());
             ui.set_sensors_ok(!st.readings.is_empty());
@@ -1413,6 +1414,7 @@ fn tick(ui: &AppWindow, state: &Rc<RefCell<State>>) {
         }
         None => {
             ui.set_cooler_ok(false);
+            ui.set_cooler_error(!running);
             ui.set_cooler_state((if running { tr("Waiting for service…") } else { tr("Service not running") }).into());
             ui.set_sensors_state(tr("No readings from service yet.").into());
             ui.set_sensors_ok(true);
